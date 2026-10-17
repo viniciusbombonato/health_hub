@@ -1,0 +1,19 @@
+[project]
+name = "health-hub"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Vinícius Bombonato", email = "viniciusm.bombonaot@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi[standard]>=0.142.0",
+]
+
+[project.scripts]
+health-hub = "health_hub:main"
+
+[build-system]
+requires = ["uv_build>=0.12.20,<0.13.0"]
+build-backend = "uv_build"
