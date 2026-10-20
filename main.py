@@ -19,7 +19,7 @@ def health_hub(name: str, password: str):
 # Vou colocar aqui uma função para validar o número de telefone usando uma biblioteca do google
 # decidi colocar aqui para verificar antes de mandar para o banco de dados
 
-def valid_phone_number(phone: str, country_alpha2 = "BR"):
+def valid_phone_number(phone: str, country_alpha2: str = "BR")-> str | None:
     try:
         validation = phonenumbers.parse(phone, country_alpha2)
 
