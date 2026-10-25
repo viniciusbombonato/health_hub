@@ -1,3 +1,9 @@
+# para rodar esse arquivo é preciso roda-lo em "modulo" pois como importamos arquivos e classes da pasta database,mas estamos
+# na pasta teste, o python não consegue achar o caminho para importar essas ferramentas, e por isso ira dar erro. 
+# o certo é rodar no terminal, na raiz do projeto, e com o comando de modulo (-m): "uv run python -m testes.test_novos_usuarios"
+# isso acontece porque isso não é um pytest, caso fosse, ja especifiquei no pyproject.toml a raiz do projeto para rodar apena "uv run pytest"
+
+#type: ignore
 """
 Passo 1.4: Teste prático de gravação e conversão de fuso horário.
 
@@ -11,12 +17,8 @@ O que este script faz:
 import sys
 from pathlib import Path
 
-# Garante que o Python encontre os módulos da raiz mesmo se rodar o script diretamente
-ROOT_DIR = Path(__file__).resolve().parent.parent
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from database.engine import Base, SessionLocal, engine
@@ -57,7 +59,7 @@ def main():
             password_hash="hash_super_secreto_123",
             age=48,
             country="BR",
-            time_zone="America_Sao_Paulo",
+            time_zone="America/Sao_Paulo",
             phone="+5511988887777"
         )
 
@@ -69,7 +71,7 @@ def main():
             password_hash="hash_paciente_456",
             age=32,
             country="PT",
-            time_zone="Europe_Lisbon",
+            time_zone="Europe/Lisbon",
             phone="+351912345678"
         )
 
@@ -80,16 +82,15 @@ def main():
         db.refresh(psicologa)
         db.refresh(paciente)
 
-        print(f"✓ Psicóloga cadastrada: {psicologa.full_name} (ID: {psicologa.id}, Fuso: {psicologa.time_zone})")
+        print(f"\n✓ Psicóloga cadastrada: {psicologa.full_name} (ID: {psicologa.id}, Fuso: {psicologa.time_zone})")
         print(f"✓ Paciente cadastrado:  {paciente.full_name} (ID: {paciente.id}, Fuso: {paciente.time_zone})")
 
         # 3. Agendando uma consulta
         print("\n[Etapa 3] Agendando consulta para amanhã às 14:00 (Horário de São Paulo)...")
 
         # Criando a data consciente do fuso de São Paulo
-        fuso_str = psicologa.time_zone.value if hasattr(psicologa.time_zone, "value") else psicologa.time_zone
-        fuso_sp = ZoneInfo(fuso_str)
-        inicio_sp = datetime.now(fuso_sp).replace(hour=14, minute=0, second=0, microsecond=0) + timedelta(days=1) # sessão para amanhã às 14h de SP
+        fuso_sp = ZoneInfo(psicologa.time_zone)
+        inicio_sp = datetime.now(fuso_sp).replace(hour=14, minute=0, second=0, microsecond=0) + timedelta(days=1)
         fim_sp = inicio_sp + timedelta(minutes=50) # Sessão padrão de 50 minutos
 
         nova_consulta = Consultas(
@@ -115,17 +116,13 @@ def main():
         # Buscamos a consulta salva no banco
         consulta_banco = db.query(Consultas).filter(Consultas.id == nova_consulta.id).first()
 
-        print(f"-> Como está gravado no Banco de Dados (UTC):")
+        print(f"\n-> Como está gravado no Banco de Dados (UTC):")
         print(f"   Início: {consulta_banco.data_hora_inicio} ({consulta_banco.data_hora_inicio.tzinfo})")
         print(f"   Fim:    {consulta_banco.data_hora_fim} ({consulta_banco.data_hora_fim.tzinfo})\n")
 
-        # Convertendo para o fuso da psicóloga
-        tz_psi_str = consulta_banco.psicologa.time_zone.value if hasattr(consulta_banco.psicologa.time_zone, "value") else consulta_banco.psicologa.time_zone
-        visao_psicologa = consulta_banco.data_hora_inicio.astimezone(ZoneInfo(tz_psi_str))
-
-        # Convertendo para o fuso do paciente
-        tz_pac_str = consulta_banco.paciente.time_zone.value if hasattr(consulta_banco.paciente.time_zone, "value") else consulta_banco.paciente.time_zone
-        visao_paciente = consulta_banco.data_hora_inicio.astimezone(ZoneInfo(tz_pac_str))
+        # Convertendo para o fuso da psicóloga e paciente de forma 100% limpa e direta
+        visao_psicologa = consulta_banco.data_hora_inicio.astimezone(ZoneInfo(consulta_banco.psicologa.time_zone))
+        visao_paciente = consulta_banco.data_hora_inicio.astimezone(ZoneInfo(consulta_banco.paciente.time_zone))
 
         print(f"-> Como a Psicóloga vê no painel dela (Brasil):")
         print(f"   Data: {visao_psicologa.strftime('%d/%m/%Y às %H:%M')} (Fuso: {visao_psicologa.tzname()})")

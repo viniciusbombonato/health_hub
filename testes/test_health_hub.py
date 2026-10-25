@@ -1,3 +1,4 @@
+#type: ignore
 import pytest
 from main import valid_phone_number
 import phonenumbers
