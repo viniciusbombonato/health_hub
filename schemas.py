@@ -69,3 +69,20 @@ class ConsultaResponse(BaseModel):
     link_reuniao: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ==============================================================================
+# SCHEMAS DE AUTENTICAÇÃO (LOGIN & TOKENS)
+# ==============================================================================
+
+class LoginRequest(BaseModel):
+    """Schema para autenticação enviando JSON."""
+    username: str = Field(..., description="Nome de usuário")
+    password: str = Field(..., description="Senha em texto puro")
+
+
+class TokenResponse(BaseModel):
+    """Resposta com o Token JWT devolvida após login bem-sucedido."""
+    access_token: str
+    token_type: str = "bearer"
+
