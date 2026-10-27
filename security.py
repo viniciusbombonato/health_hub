@@ -90,7 +90,7 @@ def obter_usuario_logado(
     valida a autenticidade e devolve os dados do usuário.
     """
     payload = decodificar_token_jwt(token)
-    username: str = payload.get("sub")
+    username: str = payload.get("sub") #type: ignore
     if username is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

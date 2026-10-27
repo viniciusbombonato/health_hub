@@ -162,7 +162,7 @@ def cadastrar_usuario(usuario_in: UserCreate, db: Session = Depends(get_db)):
             detail="Já existe um usuário cadastrado com este username ou telefone."
         )
 
-    # SEGURANÇA REAL: Criptografando a senha com bcrypt antes de salvar no banco!
+    # Criptografando a senha com bcrypt antes de salvar no banco
     senha_criptografada = gerar_hash_senha(usuario_in.password)
 
     novo_usuario = User(
@@ -247,7 +247,7 @@ def agendar_consulta(consulta_in: ConsultaCreate, db: Session = Depends(get_db))
     duracao_padrao = timedelta(minutes=50)
     data_hora_fim = consulta_in.data_hora_inicio + duracao_padrao
 
-    link = consulta_in.link_reuniao or "https://meet.google.com/exemplo-sala"
+    link = consulta_in.link_reuniao or None #caso ainda não tenha link para a reunião
 
     nova_consulta = Consultas(
         psicologa_id=consulta_in.psicologa_id,
@@ -330,6 +330,30 @@ def cancelar_consulta(
         )
         
     consulta.status = Status.CANCELADA
+    db.commit()
+    db.refresh(consulta)
+    return consulta
+
+
+@app.patch(
+    "/consultas/{consulta_id}/agendar",
+    response_model=ConsultaResponse,
+    tags=["Consultas"],
+    summary="Volta o status de uma consulta à AGENDADA caso tenha cancelado sem querer"
+)
+def agendar_novamente_consulta(
+    consulta_id: int,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    consulta = db.query(Consultas).filter(Consultas.id == consulta_id).first()
+    if not consulta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Consulta com ID {consulta_id} não foi encontrada."
+        )
+        
+    consulta.status = Status.AGENDADA
     db.commit()
     db.refresh(consulta)
     return consulta
