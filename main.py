@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 import phonenumbers
 from fastapi import FastAPI, HTTPException, Depends, status, Query
@@ -12,6 +12,7 @@ from schemas import (
     UserCreate,
     UserResponse,
     ConsultaCreate,
+    ConsultaReagendar,
     ConsultaResponse,
     LoginRequest,
     TokenResponse,
@@ -21,6 +22,10 @@ from security import (
     verificar_senha,
     criar_token_jwt,
     obter_usuario_logado,
+)
+from regras_agendamento import (
+    validar_regras_agendamento,
+    obter_horarios_disponiveis,
 )
 
 # Garante que as tabelas existam no banco ao iniciar a aplicação
@@ -243,11 +248,14 @@ def agendar_consulta(consulta_in: ConsultaCreate, db: Session = Depends(get_db))
             detail=f"O usuário de ID {consulta_in.paciente_id} não é um paciente."
         )
 
-    # Duração padrão de 50 minutos
-    duracao_padrao = timedelta(minutes=50)
-    data_hora_fim = consulta_in.data_hora_inicio + duracao_padrao
+    # Valida todas as regras de negócio: antecedência mínima, dias úteis, horário comercial, hora cheia e anti-choque!
+    data_hora_fim = validar_regras_agendamento(
+        db=db,
+        psicologa=psicologa,
+        data_hora_inicio_solicitada=consulta_in.data_hora_inicio
+    )
 
-    link = consulta_in.link_reuniao or None #caso ainda não tenha link para a reunião
+    link = consulta_in.link_reuniao or None # caso ainda não tenha link para a reunião
 
     nova_consulta = Consultas(
         psicologa_id=consulta_in.psicologa_id,
@@ -353,6 +361,75 @@ def agendar_novamente_consulta(
             detail=f"Consulta com ID {consulta_id} não foi encontrada."
         )
         
+    consulta.status = Status.AGENDADA
+    db.commit()
+    db.refresh(consulta)
+    return consulta
+
+
+@app.get(
+    "/horarios-disponiveis",
+    response_model=List[datetime],
+    tags=["Consultas"],
+    summary="Consultar horários livres de uma psicóloga em uma data específica"
+)
+def listar_horarios_disponiveis(
+    psicologa_id: int,
+    dia: date = Query(..., description="Data no formato AAAA-MM-DD (ex: 2026-10-30)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna apenas os slots de horário que:
+    1. Respeitam a antecedência mínima de 2 dias.
+    2. Estão dentro do horário comercial (08:00 às 18:00) em dias úteis.
+    3. NÃO possuem conflito com outras consultas ativas da psicóloga.
+    """
+    psicologa = db.query(User).filter(User.id == psicologa_id).first()
+    if not psicologa or psicologa.tipo != UserType.Psicologo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Psicóloga com ID {psicologa_id} não foi encontrada."
+        )
+
+    return obter_horarios_disponiveis(db, psicologa, dia)
+
+
+@app.patch(
+    "/consultas/{consulta_id}/reagendar",
+    response_model=ConsultaResponse,
+    tags=["Consultas"],
+    summary="Reagendar uma consulta para um novo horário"
+)
+def reagendar_consulta(
+    consulta_id: int,
+    reagendar_in: ConsultaReagendar,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    """
+    Reagenda uma consulta validando todas as regras no novo horário:
+    - Minuto redondo (hora cheia).
+    - Horário comercial e dia útil.
+    - Antecedência mínima.
+    - Anti-choque (sem conflitar com outras consultas da psicóloga).
+    """
+    consulta = db.query(Consultas).filter(Consultas.id == consulta_id).first()
+    if not consulta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Consulta com ID {consulta_id} não foi encontrada."
+        )
+
+    # Valida as regras para o novo horário (ignorando conflito com a própria consulta atual)
+    nova_data_fim = validar_regras_agendamento(
+        db=db,
+        psicologa=consulta.psicologa,
+        data_hora_inicio_solicitada=reagendar_in.data_hora_inicio,
+        consulta_id_ignorar=consulta.id
+    )
+
+    consulta.data_hora_inicio = reagendar_in.data_hora_inicio
+    consulta.data_hora_fim = nova_data_fim
     consulta.status = Status.AGENDADA
     db.commit()
     db.refresh(consulta)

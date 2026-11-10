@@ -56,6 +56,11 @@ class ConsultaCreate(BaseModel):
     link_reuniao: Optional[str] = Field(default=None, description="Link do Google Meet ou Zoom")
 
 
+class ConsultaReagendar(BaseModel):
+    """Schema para alteração do horário de uma consulta."""
+    data_hora_inicio: datetime = Field(..., description="Novo horário de início desejado (ex: 2026-10-30T10:00:00-03:00)")
+
+
 class ConsultaResponse(BaseModel):
     """
     Schema de SAÍDA: O que o cliente/painel recebe de volta.
