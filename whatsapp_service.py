@@ -34,18 +34,43 @@ def formatar_mensagem_lembrete(consulta: Consultas) -> str:
     return mensagem
 
 
+from config import settings
+import httpx
+
 def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
     """
     Camada de Envio Desacoplada (Adapter).
     
-    No MVP local:
-      - Simula o envio logando no terminal com destaque para fácil verificação.
-      - Retorna True simulando envio bem-sucedido.
-      
-    No ambiente de Produção:
-      - Aqui basta plugar a chamada HTTP (requests/httpx) para a API real
-        (Evolution API, Z-API, Twilio ou Meta Cloud API) usando tokens do .env.
+    1. Se as variáveis da Evolution API estiverem no .env / nuvem:
+       - Faz o disparo HTTP real para o WhatsApp!
+    2. Se não estiverem configuradas (desenvolvimento local):
+       - Simula o envio logando no terminal com destaque.
     """
+    if settings.EVOLUTION_API_URL and settings.EVOLUTION_API_KEY and settings.EVOLUTION_INSTANCE:
+        try:
+            url = f"{settings.EVOLUTION_API_URL.rstrip('/')}/message/sendText/{settings.EVOLUTION_INSTANCE}"
+            headers = {
+                "apikey": settings.EVOLUTION_API_KEY,
+                "Content-Type": "application/json"
+            }
+            # Remove o '+' para o padrão de número da Evolution API
+            numero_limpo = telefone.replace("+", "").replace(" ", "").replace("-", "")
+            payload = {
+                "number": numero_limpo,
+                "text": mensagem
+            }
+            resposta = httpx.post(url, json=payload, headers=headers, timeout=10.0)
+            if resposta.status_code in (200, 201):
+                logger.info(f"Mensagem WhatsApp enviada com sucesso via Evolution API para {telefone}")
+                return True
+            else:
+                logger.error(f"Erro ao enviar via Evolution API ({resposta.status_code}): {resposta.text}")
+                return False
+        except Exception as e:
+            logger.error(f"Exceção de rede na Evolution API: {e}")
+            return False
+
+    # Modo Simulação Local (Dev)
     print("\n" + "📱 " + "=" * 56)
     print(" [WHATSAPP SIMULADOR DE ENVIO]")
     print(f" Para: {telefone}")

@@ -75,6 +75,42 @@ def pagina_painel():
     return FileResponse(STATIC_DIR / "painel.html")
 
 
+# ==============================================================================
+# ENDPOINTS UTILITÁRIOS (METADADOS DE PAÍSES E FUSOS HORÁRIOS)
+# ==============================================================================
+import pycountry
+from zoneinfo import available_timezones
+
+# Cache em memória para resposta instantânea
+TODOS_PAISES = sorted(
+    [{"codigo": p.alpha_2, "nome": p.name} for p in pycountry.countries if hasattr(p, "alpha_2")],
+    key=lambda x: x["nome"]
+)
+
+TODOS_FUSOS = sorted(list(available_timezones()))
+
+
+@app.get(
+    "/util/paises",
+    tags=["Utilidades"],
+    summary="Listar todos os países do mundo (ISO 3166-1 alpha-2)"
+)
+def listar_todos_paises():
+    """Retorna lista com todos os países cadastrados no padrão internacional."""
+    return TODOS_PAISES
+
+
+@app.get(
+    "/util/fusos",
+    tags=["Utilidades"],
+    summary="Listar todos os fusos horários do planeta (padrão IANA)"
+)
+def listar_todos_fusos():
+    """Retorna lista com todos os identificadores IANA de fusos horários."""
+    return TODOS_FUSOS
+
+
+
 
 # ==============================================================================
 # DEPENDÊNCIA DO BANCO DE DADOS

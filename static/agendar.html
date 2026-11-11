@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agendamento de Consulta | Dra. Carolina Silva - Psicologia</title>
+  <title>Agendamento de Consulta | Dra. Carolina Bombonato - Psicologia</title>
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +23,7 @@
       <div class="w-20 h-20 mx-auto rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-3xl font-bold mb-3 shadow-inner">
         🌿
       </div>
-      <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Dra. Carolina Silva</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Dra. Carolina Bombonato</h1>
       <p class="text-teal-700 font-medium text-sm mt-1">Psicóloga Clínica • Atendimento Online Brasil e Exterior</p>
       <p class="text-slate-400 text-xs mt-1">CRP 06/123456</p>
     </header>
@@ -188,15 +188,57 @@
     let horarioSelecionadoUTC = null;
     let psicologaId = 1; // ID padrão da psicóloga (Dra. Carolina)
 
-    // Inicializa a data mínima permitida no calendário (hoje + 2 dias)
-    document.addEventListener("DOMContentLoaded", () => {
+    // Inicializa a data mínima e carrega todos os países e fusos via API
+    document.addEventListener("DOMContentLoaded", async () => {
       const hoje = new Date();
       hoje.setDate(hoje.getDate() + 2);
       const dataMinimaStr = hoje.toISOString().split('T')[0];
       const inputData = document.getElementById("input-data");
       inputData.min = dataMinimaStr;
       inputData.value = dataMinimaStr;
+
+      await carregarListasPaisesEFusos();
     });
+
+    async function carregarListasPaisesEFusos() {
+      try {
+        // 1. Carrega todos os países
+        const resPaises = await fetch("/util/paises");
+        if (resPaises.ok) {
+          const paises = await resPaises.json();
+          const selectPais = document.getElementById("select-pais");
+          selectPais.innerHTML = "";
+          paises.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.codigo;
+            opt.innerText = `${p.nome} (${p.codigo})`;
+            if (p.codigo === "BR") opt.selected = true;
+            selectPais.appendChild(opt);
+          });
+        }
+
+        // 2. Carrega todos os fusos horários
+        const resFusos = await fetch("/util/fusos");
+        if (resFusos.ok) {
+          const fusos = await resFusos.json();
+          const selectTz = document.getElementById("select-timezone");
+          selectTz.innerHTML = "";
+
+          // Tenta detectar o fuso local do navegador do paciente automaticamente!
+          const fusoLocalDetectado = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo";
+
+          fusos.forEach(tz => {
+            const opt = document.createElement("option");
+            opt.value = tz;
+            opt.innerText = tz;
+            if (tz === fusoLocalDetectado) opt.selected = true;
+            selectTz.appendChild(opt);
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao carregar países e fusos:", err);
+      }
+    }
 
     async function verificarPaciente() {
       const phoneInput = document.getElementById("input-telefone").value.trim();

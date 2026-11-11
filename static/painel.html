@@ -235,11 +235,46 @@
     let tokenAuth = localStorage.getItem("health_hub_token") || null;
     let mapaPacientes = {}; // Cache de id -> {nome, telefone}
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
+      await carregarPaisesEFusosPainel();
       if (tokenAuth) {
         exibirPainel();
       }
     });
+
+    async function carregarPaisesEFusosPainel() {
+      try {
+        const resP = await fetch("/util/paises");
+        if (resP.ok) {
+          const paises = await resP.json();
+          const selectPais = document.getElementById("paciente-pais-input");
+          selectPais.innerHTML = "";
+          paises.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.codigo;
+            opt.innerText = `${p.nome} (${p.codigo})`;
+            if (p.codigo === "BR") opt.selected = true;
+            selectPais.appendChild(opt);
+          });
+        }
+
+        const resF = await fetch("/util/fusos");
+        if (resF.ok) {
+          const fusos = await resF.json();
+          const selectTz = document.getElementById("paciente-timezone-input");
+          selectTz.innerHTML = "";
+          fusos.forEach(tz => {
+            const opt = document.createElement("option");
+            opt.value = tz;
+            opt.innerText = tz;
+            if (tz === "America/Sao_Paulo") opt.selected = true;
+            selectTz.appendChild(opt);
+          });
+        }
+      } catch (e) {
+        console.error("Erro ao carregar listas do painel:", e);
+      }
+    }
 
     async function realizarLogin(e) {
       e.preventDefault();

@@ -7,15 +7,14 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from database.usermodel import User
+from config import settings
 
-# Configurações do Token JWT
-# Em produção real (Módulo 7), moveremos essa chave para uma variável de ambiente (.env)
-SECRET_KEY = "segredo_super_secreto_e_inviolavel_para_o_mvp_health_hub"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # O token valerá por 24 horas
+# Configurações do Token JWT lidas dinamicamente do ambiente
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Esse esquema diz ao FastAPI onde o cliente deve ir para fazer login
-# Isso adiciona aquele botão de cadeado "Authorize" automático no Swagger (/docs)!
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
