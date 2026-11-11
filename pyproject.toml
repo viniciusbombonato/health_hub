@@ -17,6 +17,7 @@ dependencies = [
     "pycountry>=26.2.16",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.15.1",
+    "sqlalchemy>=2.1.8",
 ]
 
 [project.scripts]
