@@ -12,3 +12,4 @@ wheels/
 # Local environment & SQLite DB
 .env
 *.db
+.env.example
