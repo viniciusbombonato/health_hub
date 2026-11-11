@@ -337,7 +337,11 @@ dependencies = [
     { name = "apscheduler" },
     { name = "bcrypt" },
     { name = "fastapi", extra = ["standard"] },
+    { name = "httpx" },
+    { name = "phonenumbers" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "pycountry" },
+    { name = "pydantic-settings" },
     { name = "pyjwt" },
 ]
 
@@ -346,7 +350,11 @@ requires-dist = [
     { name = "apscheduler", specifier = ">=3.11.3" },
     { name = "bcrypt", specifier = ">=5.0.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.142.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "phonenumbers", specifier = ">=9.0.43" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
+    { name = "pycountry", specifier = ">=26.2.16" },
+    { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "pyjwt", specifier = ">=2.15.1" },
 ]
 
@@ -584,6 +592,15 @@ wheels = [
 ]
 
 [[package]]
+name = "phonenumbers"
+version = "9.0.43"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/d5/b3ad857b2cdd09c806436b48d2c9afcdde2673475b1a894f74da0db32e75/phonenumbers-9.0.43.tar.gz", hash = "sha256:d4e508ab800c3e5ce219b14be339deb3d55a0ab81af82fea44749fcabd01e908", size = 2314544, upload-time = "2026-11-06T11:43:26.829Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/4c/b33a2189464f0f67215e9c8401cb2931ad3ab3f7c8060929f84fe4970544/phonenumbers-9.0.43-py2.py3-none-any.whl", hash = "sha256:349bc799f15e010e35bd2c7d28149950ae74479cb1e11fb054ed9a95ecb4b437", size = 2596726, upload-time = "2026-11-06T11:43:23.63Z" },
+]
+
+[[package]]
 name = "protobuf"
 version = "7.36.2"
 source = { registry = "https://pypi.org/simple" }
@@ -642,6 +659,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/48/4b/a6ead08df35feb2f5e10897e33c1ba26809f85365a7c2a0efa244acf9008/psycopg_binary-3.3.8-cp315-cp315-musllinux_1_2_riscv64.whl", hash = "sha256:6bde86fb307fe1698fbbfeaa96130d4825f265afbeff217b959c1905b86f924d", size = 4032823, upload-time = "2026-11-04T09:44:15.209Z" },
     { url = "https://files.pythonhosted.org/packages/68/8a/7ff05b083c676024beb549863a19d59b205931010ec7f3a12aadf5de9901/psycopg_binary-3.3.8-cp315-cp315-musllinux_1_2_x86_64.whl", hash = "sha256:c2154bd84cf20148d9a59e3ade04f0f754462b96cfac91d54d76ef33af7946e5", size = 4341050, upload-time = "2026-11-04T09:44:21.257Z" },
     { url = "https://files.pythonhosted.org/packages/59/a7/58ab2cf0a6da11d5c2b00d524f5d5b114e2e6359e629d34360cf57a22e20/psycopg_binary-3.3.8-cp315-cp315-win_amd64.whl", hash = "sha256:0332e83c2e78b1c8c00c1095688f9b332bdde9d5e9d61b8ce1cdcaf716a19b9e", size = 3716321, upload-time = "2026-11-04T09:44:24.631Z" },
+]
+
+[[package]]
+name = "pycountry"
+version = "26.2.16"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/1d/061b9e7a48b85cfd69f33c33d2ef784a531c359399ad764243399673c8f5/pycountry-26.2.16.tar.gz", hash = "sha256:5b6027d453fcd6060112b951dd010f01f168b51b4bf8a1f1fc8c95c8d94a0801", size = 7711342, upload-time = "2026-02-17T03:42:52.367Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9c/42/7703bd45b62fecd44cd7d3495423097e2f7d28bc2e99e7c1af68892ab157/pycountry-26.2.16-py3-none-any.whl", hash = "sha256:115c4baf7cceaa30f59a4694d79483c9167dbce7a9de4d3d571c5f3ea77c305a", size = 8044600, upload-time = "2026-02-17T03:42:49.777Z" },
 ]
 
 [[package]]

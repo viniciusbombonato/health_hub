@@ -11,7 +11,11 @@ dependencies = [
     "apscheduler>=3.11.3",
     "bcrypt>=5.0.0",
     "fastapi[standard]>=0.142.0",
+    "httpx>=0.28.1",
+    "phonenumbers>=9.0.43",
     "psycopg[binary]>=3.2.0",
+    "pycountry>=26.2.16",
+    "pydantic-settings>=2.15.0",
     "pyjwt>=2.15.1",
 ]
 

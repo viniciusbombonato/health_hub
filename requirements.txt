@@ -220,6 +220,7 @@ httpx==0.28.1 \
     # via
     #   fastapi
     #   fastapi-cloud-cli
+    #   health-hub
 idna==3.20 \
     --hash=sha256:a7db850025b95ded1eae8a46181a1a6c56c92c96f0e2b005d9ff8dc0210cab44 \
     --hash=sha256:ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c
@@ -306,6 +307,10 @@ opentelemetry-semantic-conventions==0.66b0 \
     --hash=sha256:175b19dd98c4473f4f43a2b1df59186fd7b4a48cd3f77cbe03438b6d6fda230a \
     --hash=sha256:97a77dce484c54861e7eeff7651fd8a806dd3c30e501dc316730215ec36890e6
     # via opentelemetry-sdk
+phonenumbers==9.0.43 \
+    --hash=sha256:349bc799f15e010e35bd2c7d28149950ae74479cb1e11fb054ed9a95ecb4b437 \
+    --hash=sha256:d4e508ab800c3e5ce219b14be339deb3d55a0ab81af82fea44749fcabd01e908
+    # via health-hub
 protobuf==7.36.2 \
     --hash=sha256:497d0463ff3316681da6c0b9e8d06cb465d61abce00b613ab42226175644d1bb \
     --hash=sha256:89f23aa53c24553a2416fd4fd1ec06f74fa42b14b546d8883128813f775bbfd2 \
@@ -346,6 +351,10 @@ psycopg-binary==3.3.8 ; implementation_name != 'pypy' \
     --hash=sha256:f31dea98f8c5c6c60e8e049388f24eec14088518e2ded0f892d96c785401e688 \
     --hash=sha256:fc134798cd646a15326004bbeff4c2719e000a9ac52f6b893a767f7c5276e24b
     # via psycopg
+pycountry==26.2.16 \
+    --hash=sha256:115c4baf7cceaa30f59a4694d79483c9167dbce7a9de4d3d571c5f3ea77c305a \
+    --hash=sha256:5b6027d453fcd6060112b951dd010f01f168b51b4bf8a1f1fc8c95c8d94a0801
+    # via health-hub
 pydantic==2.13.5 \
     --hash=sha256:346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73 \
     --hash=sha256:51a9c5f7b2f8e636f04c6cada605d9b6a3bf1348fdf945a3d8869b19bba0ee08
@@ -394,7 +403,9 @@ pydantic-extra-types==2.11.1 \
 pydantic-settings==2.15.0 \
     --hash=sha256:0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42 \
     --hash=sha256:694b793e84f766ba76a90ebdefc01d0a9a045dab0382bee70393da93712ad117
-    # via fastapi
+    # via
+    #   fastapi
+    #   health-hub
 pygments==2.21.0 \
     --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9 \
     --hash=sha256:610ca751c9bc2492b38eb9a38a7fbc93edbbb2d7182edaf34e66ae493dee5c8c
