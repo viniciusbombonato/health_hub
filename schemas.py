@@ -72,6 +72,7 @@ class ConsultaResponse(BaseModel):
     data_hora_fim: datetime
     status: Status
     link_reuniao: Optional[str] = None
+    lembrete_enviado: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -90,4 +91,33 @@ class TokenResponse(BaseModel):
     """Resposta com o Token JWT devolvida após login bem-sucedido."""
     access_token: str
     token_type: str = "bearer"
+
+
+# ==============================================================================
+# SCHEMAS DE PACIENTES ATIVOS (ABORDAGEM CLÍNICA)
+# ==============================================================================
+
+class VerificarPacienteRequest(BaseModel):
+    """Verifica se o número de WhatsApp pertence a um paciente ativo."""
+    phone: str = Field(..., description="Número de WhatsApp com DDI (ex: +5511999998888 ou 11999998888)")
+    country: str = Field(default="BR", description="Código do país (ex: BR, PT)")
+
+
+class VerificarPacienteResponse(BaseModel):
+    """Retorno da verificação."""
+    ativo: bool
+    paciente_id: Optional[int] = None
+    nome: Optional[str] = None
+    time_zone: Optional[str] = None
+    mensagem: str
+
+
+class PacienteRapidoCreate(BaseModel):
+    """Cadastro simplificado de paciente feito pela psicóloga no painel dela."""
+    full_name: str = Field(..., min_length=2, max_length=120)
+    phone: str = Field(..., description="Telefone com DDI e DDD")
+    country: str = Field(default="BR")
+    time_zone: str = Field(default="America/Sao_Paulo")
+    age: int = Field(default=30, gt=0, lt=130)
+
 

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Enum as SQLEnum
+from sqlalchemy import String, Integer, ForeignKey, DateTime, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
@@ -53,6 +53,8 @@ class Consultas(Base):
 
     status: Mapped[Status] = mapped_column(SQLEnum(Status, native_enum=False), default=Status.AGENDADA, index=True, nullable=False)
     link_reuniao: Mapped[str] = mapped_column(String(500), nullable=True)
+
+    lembrete_enviado: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Relacionamento de tabelas
     psicologa = relationship("User", foreign_keys=[psicologa_id], back_populates="consultas_como_psicologa")

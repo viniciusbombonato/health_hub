@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agendamento de Consulta | Dra. Carolina Silva - Psicologia</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center py-8 px-4">
+
+  <!-- Container Principal -->
+  <main class="w-full max-w-xl bg-white shadow-xl shadow-slate-200/60 rounded-3xl p-6 sm:p-10 border border-slate-100">
+    
+    <!-- Cabeçalho Acolhedor do Consultório -->
+    <header class="text-center mb-8 pb-6 border-b border-slate-100">
+      <div class="w-20 h-20 mx-auto rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-3xl font-bold mb-3 shadow-inner">
+        🌿
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Dra. Carolina Silva</h1>
+      <p class="text-teal-700 font-medium text-sm mt-1">Psicóloga Clínica • Atendimento Online Brasil e Exterior</p>
+      <p class="text-slate-400 text-xs mt-1">CRP 06/123456</p>
+    </header>
+
+    <!-- ETAPA 1: Identificação pelo WhatsApp (Lista de Pacientes Ativos) -->
+    <section id="step-identificacao">
+      <div class="mb-5">
+        <label for="input-telefone" class="block text-sm font-semibold text-slate-700 mb-1">
+          Informe seu WhatsApp cadastrado
+        </label>
+        <p class="text-xs text-slate-500 mb-3">
+          Por favor, digite seu número com DDD (ex: 11988887777 ou com DDI de outro país).
+        </p>
+        <div class="flex gap-2">
+          <select id="select-pais" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            <option value="BR">🇧🇷 Brasil (+55)</option>
+            <option value="PT">🇵🇹 Portugal (+351)</option>
+            <option value="US">🇺🇸 EUA (+1)</option>
+            <option value="ES">🇪🇸 Espanha (+34)</option>
+            <option value="UK">🇬🇧 Reino Unido (+44)</option>
+          </select>
+          <input 
+            type="tel" 
+            id="input-telefone" 
+            placeholder="(11) 98888-7777" 
+            class="flex-1 bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+          >
+        </div>
+      </div>
+
+      <button 
+        type="button" 
+        id="btn-verificar" 
+        onclick="verificarPaciente()"
+        class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 shadow-md shadow-teal-600/20 active:scale-[0.99]"
+      >
+        Continuar para os Horários →
+      </button>
+
+      <!-- Card para Paciente Não Cadastrado (Convite para Triagem) -->
+      <div id="alerta-nao-cadastrado" class="hidden mt-6 p-5 bg-amber-50/80 border border-amber-200/70 rounded-2xl">
+        <div class="flex items-start gap-3">
+          <span class="text-2xl">💬</span>
+          <div>
+            <h3 class="text-sm font-bold text-amber-900">Novo por aqui? Seja bem-vindo(a)!</h3>
+            <p class="text-xs text-amber-800 mt-1 leading-relaxed">
+              Para garantir um atendimento personalizado, a Dra. Carolina realiza uma breve conversa inicial de triagem antes do primeiro agendamento.
+            </p>
+            <a 
+              href="https://wa.me/5511988887777?text=Ol%C3%A1%2C%20Dra.%20Carolina!%20Gostaria%20de%20iniciar%20acompanhamento%20psicol%C3%B3gico." 
+              target="_blank"
+              class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+            >
+              Falar com a Dra. Carolina no WhatsApp ↗
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ETAPA 2: Escolha de Fuso, Data e Horário (Aparece após paciente verificado) -->
+    <section id="step-agendamento" class="hidden">
+      <!-- Boas-vindas ao paciente -->
+      <div class="bg-teal-50 border border-teal-200/60 rounded-2xl p-4 mb-6 flex items-center justify-between">
+        <div>
+          <span class="text-xs text-teal-800 font-semibold uppercase tracking-wider">Paciente Ativo</span>
+          <h2 id="paciente-nome" class="text-base font-bold text-teal-950">Manuel Antunes</h2>
+        </div>
+        <button onclick="trocarPaciente()" class="text-xs text-teal-700 hover:text-teal-900 underline">
+          Trocar
+        </button>
+      </div>
+
+      <!-- Fuso Horário do Paciente -->
+      <div class="mb-5">
+        <label for="select-timezone" class="block text-xs font-semibold text-slate-700 mb-1">
+          Seu Fuso Horário Local:
+        </label>
+        <select id="select-timezone" onchange="carregarHorarios()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+          <option value="America/Sao_Paulo">🇧🇷 Horário de Brasília (America/Sao_Paulo)</option>
+          <option value="Europe/Lisbon">🇵🇹 Lisboa / Portugal (Europe/Lisbon)</option>
+          <option value="Europe/London">🇬🇧 Londres / UK (Europe/London)</option>
+          <option value="Europe/Madrid">🇪🇸 Madri / Espanha (Europe/Madrid)</option>
+          <option value="America/New_York">🇺🇸 Nova York / EUA (America/New_York)</option>
+        </select>
+      </div>
+
+      <!-- Escolha da Data -->
+      <div class="mb-5">
+        <label for="input-data" class="block text-xs font-semibold text-slate-700 mb-1">
+          Selecione a Data Desejada (Segunda a Sexta):
+        </label>
+        <input 
+          type="date" 
+          id="input-data" 
+          onchange="carregarHorarios()"
+          class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+        >
+        <p class="text-[11px] text-slate-400 mt-1">Lembrete: agendamentos exigem no mínimo 2 dias de antecedência.</p>
+      </div>
+
+      <!-- Grade de Horários Livres -->
+      <div class="mb-6">
+        <label class="block text-xs font-semibold text-slate-700 mb-2">
+          Horários Disponíveis (Sessões de 50min):
+        </label>
+        
+        <div id="loading-horarios" class="hidden text-center py-6 text-slate-400 text-sm">
+          Buscando horários livres...
+        </div>
+
+        <div id="grade-horarios" class="grid grid-cols-3 gap-2.5">
+          <!-- Os botões de horários serão injetados via JavaScript -->
+        </div>
+
+        <p id="msg-sem-horarios" class="hidden text-center text-xs text-slate-500 py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          Nenhum horário disponível para a data selecionada. Por favor, escolha outro dia útil.
+        </p>
+      </div>
+
+      <!-- Botão de Confirmação Final -->
+      <button 
+        type="button" 
+        id="btn-confirmar" 
+        onclick="confirmarAgendamento()" 
+        disabled
+        class="w-full bg-teal-600 disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-teal-700 text-white font-semibold py-3.5 px-6 rounded-xl transition duration-200 shadow-md shadow-teal-600/20"
+      >
+        Confirmar Consulta
+      </button>
+    </section>
+
+    <!-- ETAPA 3: Tela de Sucesso -->
+    <section id="step-sucesso" class="hidden text-center py-6">
+      <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl font-bold mb-4">
+        ✓
+      </div>
+      <h2 class="text-2xl font-bold text-slate-800">Consulta Confirmada!</h2>
+      <p class="text-sm text-slate-600 mt-2 max-w-sm mx-auto" id="sucesso-detalhes">
+        <!-- Detalhes preenchidos via JS -->
+      </p>
+
+      <div class="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-left text-xs text-slate-600 space-y-1">
+        <p>• Um lembrete automático será enviado para o seu WhatsApp 24h antes da sessão.</p>
+        <p>• O link do Google Meet estará disponível na confirmação.</p>
+      </div>
+
+      <button onclick="location.reload()" class="mt-6 text-xs text-teal-700 font-semibold hover:underline">
+        Agendar outra sessão
+      </button>
+    </section>
+
+  </main>
+
+  <footer class="mt-8 text-xs text-slate-400 text-center">
+    Health Hub • Plataforma Segura em conformidade com o Código de Ética e LGPD
+  </footer>
+
+  <!-- Lógica JavaScript do Agendamento -->
+  <script>
+    let pacienteAtual = null;
+    let horarioSelecionadoUTC = null;
+    let psicologaId = 1; // ID padrão da psicóloga (Dra. Carolina)
+
+    // Inicializa a data mínima permitida no calendário (hoje + 2 dias)
+    document.addEventListener("DOMContentLoaded", () => {
+      const hoje = new Date();
+      hoje.setDate(hoje.getDate() + 2);
+      const dataMinimaStr = hoje.toISOString().split('T')[0];
+      const inputData = document.getElementById("input-data");
+      inputData.min = dataMinimaStr;
+      inputData.value = dataMinimaStr;
+    });
+
+    async function verificarPaciente() {
+      const phoneInput = document.getElementById("input-telefone").value.trim();
+      const countryInput = document.getElementById("select-pais").value;
+      const alertaNaoCadastrado = document.getElementById("alerta-nao-cadastrado");
+
+      alertaNaoCadastrado.classList.add("hidden");
+
+      if (!phoneInput) {
+        alert("Por favor, digite seu número de WhatsApp.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/pacientes/verificar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: phoneInput, country: countryInput })
+        });
+        const data = await res.json();
+
+        if (data.ativo) {
+          pacienteAtual = data;
+          document.getElementById("paciente-nome").innerText = data.nome;
+          
+          if (data.time_zone) {
+            document.getElementById("select-timezone").value = data.time_zone;
+          }
+
+          document.getElementById("step-identificacao").classList.add("hidden");
+          document.getElementById("step-agendamento").classList.remove("hidden");
+          carregarHorarios();
+        } else {
+          alertaNaoCadastrado.classList.remove("hidden");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao verificar cadastro. Tente novamente.");
+      }
+    }
+
+    function trocarPaciente() {
+      pacienteAtual = null;
+      document.getElementById("step-agendamento").classList.add("hidden");
+      document.getElementById("step-identificacao").classList.remove("hidden");
+    }
+
+    async function carregarHorarios() {
+      const dataEscolhida = document.getElementById("input-data").value;
+      const timezoneEscolhido = document.getElementById("select-timezone").value;
+      const grade = document.getElementById("grade-horarios");
+      const loading = document.getElementById("loading-horarios");
+      const msgSemHorarios = document.getElementById("msg-sem-horarios");
+      const btnConfirmar = document.getElementById("btn-confirmar");
+
+      if (!dataEscolhida) return;
+
+      grade.innerHTML = "";
+      btnConfirmar.disabled = true;
+      horarioSelecionadoUTC = null;
+      loading.classList.remove("hidden");
+      msgSemHorarios.classList.add("hidden");
+
+      try {
+        const res = await fetch(`/horarios-disponiveis?psicologa_id=${psicologaId}&dia=${dataEscolhida}`);
+        const horariosUTC = await res.json();
+
+        loading.classList.add("hidden");
+
+        if (!horariosUTC || horariosUTC.length === 0) {
+          msgSemHorarios.classList.remove("hidden");
+          return;
+        }
+
+        horariosUTC.forEach(isoUTC => {
+          const dateObj = new Date(isoUTC);
+
+          // Converte para o fuso horário selecionado pelo paciente
+          const horaFormatada = dateObj.toLocaleTimeString("pt-BR", {
+            timeZone: timezoneEscolhido,
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "slot-btn border border-slate-200 bg-white hover:border-teal-500 hover:text-teal-700 font-semibold py-2.5 px-3 rounded-xl text-sm transition text-slate-700";
+          btn.innerText = horaFormatada;
+
+          btn.onclick = () => {
+            document.querySelectorAll(".slot-btn").forEach(b => {
+              b.classList.remove("bg-teal-600", "text-white", "border-teal-600");
+              b.classList.add("bg-white", "text-slate-700", "border-slate-200");
+            });
+            btn.classList.add("bg-teal-600", "text-white", "border-teal-600");
+            btn.classList.remove("bg-white", "text-slate-700", "border-slate-200");
+            
+            horarioSelecionadoUTC = isoUTC;
+            btnConfirmar.disabled = false;
+          };
+
+          grade.appendChild(btn);
+        });
+
+      } catch (err) {
+        console.error(err);
+        loading.classList.add("hidden");
+        alert("Erro ao buscar horários disponíveis.");
+      }
+    }
+
+    async function confirmarAgendamento() {
+      if (!horarioSelecionadoUTC || !pacienteAtual) return;
+
+      const btnConfirmar = document.getElementById("btn-confirmar");
+      btnConfirmar.disabled = true;
+      btnConfirmar.innerText = "Agendando...";
+
+      try {
+        const res = await fetch("/consultas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            psicologa_id: psicologaId,
+            paciente_id: pacienteAtual.paciente_id,
+            data_hora_inicio: horarioSelecionadoUTC
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          const timezoneEscolhido = document.getElementById("select-timezone").value;
+          const dataLocal = new Date(data.data_hora_inicio).toLocaleDateString("pt-BR", { timeZone: timezoneEscolhido });
+          const horaLocal = new Date(data.data_hora_inicio).toLocaleTimeString("pt-BR", { timeZone: timezoneEscolhido, hour: "2-digit", minute: "2-digit" });
+
+          document.getElementById("sucesso-detalhes").innerHTML = `
+            Sua sessão com a Dra. Carolina foi agendada para <strong>${dataLocal} às ${horaLocal}</strong> no seu fuso horário local.
+          `;
+          document.getElementById("step-agendamento").classList.add("hidden");
+          document.getElementById("step-sucesso").classList.remove("hidden");
+        } else {
+          alert(data.detail || "Não foi possível agendar este horário.");
+          btnConfirmar.disabled = false;
+          btnConfirmar.innerText = "Confirmar Consulta";
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao enviar agendamento.");
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerText = "Confirmar Consulta";
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -16,6 +16,9 @@ from schemas import (
     ConsultaResponse,
     LoginRequest,
     TokenResponse,
+    VerificarPacienteRequest,
+    VerificarPacienteResponse,
+    PacienteRapidoCreate,
 )
 from security import (
     gerar_hash_senha,
@@ -23,19 +26,54 @@ from security import (
     criar_token_jwt,
     obter_usuario_logado,
 )
+from contextlib import asynccontextmanager
 from regras_agendamento import (
     validar_regras_agendamento,
     obter_horarios_disponiveis,
 )
+from whatsapp_service import processar_lembrete_consulta
+from scheduler import iniciar_agendador, parar_agendador, verificar_e_enviar_lembretes
 
 # Garante que as tabelas existam no banco ao iniciar a aplicação
 Base.metadata.create_all(bind=engine)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Inicialização: liga o APScheduler para rodar em segundo plano
+    iniciar_agendador()
+    yield
+    # Encerramento: desliga o scheduler com segurança
+    parar_agendador()
+
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
+
 app = FastAPI(
     title="Health Hub API",
-    description="API de Agendamento de Consultas de Psicologia com Autenticação e LGPD",
-    version="0.2.0"
+    description="API de Agendamento de Consultas de Psicologia com Lembretes WhatsApp e LGPD",
+    version="0.3.0",
+    lifespan=lifespan
 )
+
+# Servindo arquivos estáticos (CSS, JS, imagens)
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+# Rotas para entrega das páginas web
+@app.get("/agendar", tags=["Frontend"], summary="Tela pública de agendamento do paciente")
+def pagina_agendar():
+    return FileResponse(STATIC_DIR / "agendar.html")
+
+
+@app.get("/painel", tags=["Frontend"], summary="Painel administrativo da psicóloga")
+def pagina_painel():
+    return FileResponse(STATIC_DIR / "painel.html")
+
 
 
 # ==============================================================================
@@ -211,6 +249,107 @@ def buscar_usuario(user_id: int, db: Session = Depends(get_db)):
             detail=f"Usuário com ID {user_id} não foi encontrado."
         )
     return usuario
+
+
+# ==============================================================================
+# FLUXO DE PACIENTES ATIVOS (ABORDAGEM 2: LISTA DE PACIENTES DA CLÍNICA)
+# ==============================================================================
+
+@app.post(
+    "/pacientes/verificar",
+    response_model=VerificarPacienteResponse,
+    tags=["Pacientes"],
+    summary="Verificar se o WhatsApp pertence a um paciente ativo pré-cadastrado"
+)
+def verificar_paciente_ativo(
+    dados: VerificarPacienteRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Utilizado na tela pública de agendamento:
+    O paciente digita seu WhatsApp. Se já for cadastrado pela psicóloga,
+    libera a seleção de horários. Se não for, convida para uma triagem inicial.
+    """
+    telefone_formatado = valid_phone_number(dados.phone, dados.country)
+    if not telefone_formatado:
+        return VerificarPacienteResponse(
+            ativo=False,
+            mensagem="Número de telefone inválido. Verifique o DDD e os dígitos."
+        )
+
+    paciente = db.query(User).filter(
+        User.phone == telefone_formatado,
+        User.tipo == UserType.Paciente
+    ).first()
+
+    if not paciente:
+        return VerificarPacienteResponse(
+            ativo=False,
+            mensagem=(
+                "Você ainda não possui cadastro ativo nesta clínica. "
+                "Para iniciar o acompanhamento, entre em contato diretamente pelo WhatsApp da psicóloga para uma breve conversa inicial!"
+            )
+        )
+
+    return VerificarPacienteResponse(
+        ativo=True,
+        paciente_id=paciente.id,
+        nome=paciente.full_name,
+        time_zone=paciente.time_zone,
+        mensagem=f"Bem-vindo(a) de volta, {paciente.full_name}! Selecione seu horário abaixo."
+    )
+
+
+@app.post(
+    "/pacientes/cadastrar-rapido",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Pacientes"],
+    summary="Psicóloga cadastra um novo paciente aprovado (Privado)"
+)
+def cadastrar_paciente_rapido(
+    paciente_in: PacienteRapidoCreate,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    """
+    Apenas a psicóloga autenticada pode cadastrar novos pacientes aprovados.
+    Cria a conta do paciente com senha padrão temporária para uso futuro.
+    """
+    telefone_formatado = valid_phone_number(paciente_in.phone, paciente_in.country)
+    if not telefone_formatado:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Telefone inválido para o país '{paciente_in.country}'."
+        )
+
+    existente = db.query(User).filter(User.phone == telefone_formatado).first()
+    if existente:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Já existe um paciente cadastrado com este número de telefone."
+        )
+
+    # Gera username automático baseado no primeiro nome + últimos dígitos do fone
+    primeiro_nome = paciente_in.full_name.split()[0].lower()
+    ultimos_digitos = telefone_formatado[-4:]
+    username_gerado = f"{primeiro_nome}_{ultimos_digitos}"
+
+    novo_paciente = User(
+        tipo=UserType.Paciente,
+        full_name=paciente_in.full_name,
+        username=username_gerado,
+        password_hash=gerar_hash_senha("senha_provisoria_123"),
+        age=paciente_in.age,
+        country=paciente_in.country,
+        time_zone=paciente_in.time_zone,
+        phone=telefone_formatado
+    )
+
+    db.add(novo_paciente)
+    db.commit()
+    db.refresh(novo_paciente)
+    return novo_paciente
 
 
 # ==============================================================================
@@ -434,3 +573,60 @@ def reagendar_consulta(
     db.commit()
     db.refresh(consulta)
     return consulta
+
+
+@app.post(
+    "/consultas/{consulta_id}/enviar-lembrete",
+    response_model=ConsultaResponse,
+    tags=["WhatsApp"],
+    summary="Disparar manualmente o lembrete via WhatsApp para uma consulta"
+)
+def disparar_lembrete_manual(
+    consulta_id: int,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    """
+    Permite à psicóloga disparar o lembrete sob demanda pelo painel administrativo.
+    Gera o texto com data/hora convertida no fuso do paciente e envia a mensagem.
+    """
+    consulta = db.query(Consultas).filter(Consultas.id == consulta_id).first()
+    if not consulta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Consulta com ID {consulta_id} não foi encontrada."
+        )
+
+    if consulta.status != Status.AGENDADA:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Não é possível enviar lembrete para uma consulta com status '{consulta.status.value}'."
+        )
+
+    sucesso = processar_lembrete_consulta(consulta)
+    if not sucesso:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Falha ao enviar mensagem de lembrete via WhatsApp."
+        )
+
+    consulta.lembrete_enviado = True
+    db.commit()
+    db.refresh(consulta)
+    return consulta
+
+
+@app.post(
+    "/consultas/processar-lembretes-agora",
+    tags=["WhatsApp"],
+    summary="Executar imediatamente a verificação de lembretes pendentes das próximas 24h"
+)
+def executar_verificacao_lembretes_agora(
+    usuario_logado: dict = Depends(obter_usuario_logado)
+):
+    """
+    Aciona imediatamente a rotina do agendador em background
+    para checar e enviar lembretes pendentes sem precisar aguardar os 30 minutos.
+    """
+    verificar_e_enviar_lembretes()
+    return {"mensagem": "Rotina de verificação de lembretes executada com sucesso!"}
