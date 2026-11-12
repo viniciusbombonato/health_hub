@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from database.engine import Base, SessionLocal, engine
-from database.usermodel import User, UserType
+from database.usermodel import User, UserType, RecorrenciaTipo
 from database.consultas import Consultas, Status
 from schemas import (
     UserCreate,
@@ -18,7 +18,10 @@ from schemas import (
     TokenResponse,
     VerificarPacienteRequest,
     VerificarPacienteResponse,
+    ProximaConsultaInfo,
     PacienteRapidoCreate,
+    ConfigurarRecorrenciaRequest,
+    RecusarConsultaRequest,
 )
 from security import (
     gerar_hash_senha,
@@ -30,8 +33,9 @@ from contextlib import asynccontextmanager
 from regras_agendamento import (
     validar_regras_agendamento,
     obter_horarios_disponiveis,
+    gerar_consultas_recorrentes,
 )
-from whatsapp_service import processar_lembrete_consulta
+from whatsapp_service import processar_lembrete_consulta, processar_notificacao_status
 from scheduler import iniciar_agendador, parar_agendador, verificar_e_enviar_lembretes
 
 # Garante que as tabelas existam no banco ao iniciar a aplicação
@@ -327,12 +331,34 @@ def verificar_paciente_ativo(
             )
         )
 
+    # Busca a próxima consulta ativa (confirmada ou pendente) do paciente
+    agora_utc = datetime.now(timedelta(0))
+    proxima = db.query(Consultas).filter(
+        Consultas.paciente_id == paciente.id,
+        Consultas.status.in_([Status.CONFIRMADA, Status.PENDENTE_APROVACAO]),
+        Consultas.data_hora_inicio >= datetime.now(paciente.consultas_como_paciente[0].data_hora_inicio.tzinfo if paciente.consultas_como_paciente else None).astimezone(timedelta(0)) if False else Consultas.data_hora_fim >= datetime.now(Consultas.data_hora_inicio.type.impl.python_type if hasattr(Consultas.data_hora_inicio.type, 'impl') else None) if False else Consultas.data_hora_inicio >= datetime.utcnow()
+    ).order_by(Consultas.data_hora_inicio.asc()).first()
+
+    proxima_info = None
+    if proxima:
+        proxima_info = ProximaConsultaInfo(
+            id=proxima.id,
+            data_hora_inicio=proxima.data_hora_inicio,
+            data_hora_fim=proxima.data_hora_fim,
+            status=proxima.status,
+            link_reuniao=proxima.link_reuniao
+        )
+
     return VerificarPacienteResponse(
         ativo=True,
         paciente_id=paciente.id,
         nome=paciente.full_name,
         time_zone=paciente.time_zone,
-        mensagem=f"Bem-vindo(a) de volta, {paciente.full_name}! Selecione seu horário abaixo."
+        tipo_recorrencia=paciente.tipo_recorrencia,
+        dia_semana_fixo=paciente.dia_semana_fixo,
+        horario_fixo=paciente.horario_fixo,
+        proxima_consulta=proxima_info,
+        mensagem=f"Bem-vindo(a) de volta, {paciente.full_name}!"
     )
 
 
@@ -350,7 +376,7 @@ def cadastrar_paciente_rapido(
 ):
     """
     Apenas a psicóloga autenticada pode cadastrar novos pacientes aprovados.
-    Cria a conta do paciente com senha padrão temporária para uso futuro.
+    Permite definir o horário fixo e recorrência e já gerar automaticamente as consultas na agenda!
     """
     telefone_formatado = valid_phone_number(paciente_in.phone, paciente_in.country)
     if not telefone_formatado:
@@ -366,7 +392,6 @@ def cadastrar_paciente_rapido(
             detail="Já existe um paciente cadastrado com este número de telefone."
         )
 
-    # Gera username automático baseado no primeiro nome + últimos dígitos do fone
     primeiro_nome = paciente_in.full_name.split()[0].lower()
     ultimos_digitos = telefone_formatado[-4:]
     username_gerado = f"{primeiro_nome}_{ultimos_digitos}"
@@ -379,13 +404,66 @@ def cadastrar_paciente_rapido(
         age=paciente_in.age,
         country=paciente_in.country,
         time_zone=paciente_in.time_zone,
-        phone=telefone_formatado
+        phone=telefone_formatado,
+        tipo_recorrencia=paciente_in.tipo_recorrencia,
+        dia_semana_fixo=paciente_in.dia_semana_fixo,
+        horario_fixo=paciente_in.horario_fixo
     )
 
     db.add(novo_paciente)
     db.commit()
     db.refresh(novo_paciente)
+
+    # Se a psicóloga já informou dia e horário fixo, gera as consultas futuras automaticamente
+    if novo_paciente.dia_semana_fixo is not None and novo_paciente.horario_fixo:
+        psicologa = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+        if psicologa:
+            gerar_consultas_recorrentes(db, psicologa, novo_paciente, quantidade_semanas=8)
+
     return novo_paciente
+
+
+@app.post(
+    "/pacientes/{paciente_id}/configurar-recorrencia",
+    response_model=UserResponse,
+    tags=["Pacientes"],
+    summary="Psicóloga define ou altera o horário e frequência recorrente do paciente"
+)
+def configurar_recorrencia_paciente(
+    paciente_id: int,
+    dados: ConfigurarRecorrenciaRequest,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    paciente = db.query(User).filter(User.id == paciente_id, User.tipo == UserType.Paciente).first()
+    if not paciente:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Paciente não encontrado."
+        )
+
+    psicologa = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+    if not psicologa:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Psicóloga não encontrada."
+        )
+
+    paciente.tipo_recorrencia = dados.tipo_recorrencia
+    paciente.dia_semana_fixo = dados.dia_semana_fixo
+    paciente.horario_fixo = dados.horario_fixo
+    db.commit()
+    db.refresh(paciente)
+
+    # Gera as consultas automáticas para as semanas escolhidas
+    gerar_consultas_recorrentes(
+        db=db,
+        psicologa=psicologa,
+        paciente=paciente,
+        quantidade_semanas=dados.gerar_semanas
+    )
+
+    return paciente
 
 
 # ==============================================================================
@@ -396,49 +474,94 @@ def cadastrar_paciente_rapido(
     response_model=ConsultaResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["Consultas"],
-    summary="Agendar uma nova consulta (Público para pacientes)"
+    summary="Solicitar ou agendar uma consulta (Público ou Psicóloga)"
 )
-def agendar_consulta(consulta_in: ConsultaCreate, db: Session = Depends(get_db)):
+def agendar_consulta(
+    consulta_in: ConsultaCreate,
+    db: Session = Depends(get_db)
+):
     psicologa = db.query(User).filter(User.id == consulta_in.psicologa_id).first()
-    if not psicologa:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Psicóloga com ID {consulta_in.psicologa_id} não foi encontrada."
-        )
-    if psicologa.tipo != UserType.Psicologo:
+    if not psicologa or psicologa.tipo != UserType.Psicologo:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"O usuário de ID {consulta_in.psicologa_id} não é uma psicóloga."
+            detail="Psicóloga inválida."
+        )
+
+    paciente = db.query(User).filter(User.id == consulta_in.paciente_id).first()
+    if not paciente or paciente.tipo != UserType.Paciente:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Paciente inválido."
+        )
+
+    # Paciente marcando pelo link público: EXIGE antecedência mínima de 2 dias!
+    data_hora_fim = validar_regras_agendamento(
+        db=db,
+        psicologa=psicologa,
+        data_hora_inicio_solicitada=consulta_in.data_hora_inicio,
+        exigir_antecedencia=True
+    )
+
+    link = consulta_in.link_reuniao or None
+
+    # Toda sessão solicitada pelo paciente entra como PENDENTE DE APROVAÇÃO pela psicóloga
+    nova_consulta = Consultas(
+        psicologa_id=consulta_in.psicologa_id,
+        paciente_id=consulta_in.paciente_id,
+        data_hora_inicio=consulta_in.data_hora_inicio,
+        data_hora_fim=data_hora_fim,
+        status=Status.PENDENTE_APROVACAO,
+        link_reuniao=link
+    )
+
+    db.add(nova_consulta)
+    db.commit()
+    db.refresh(nova_consulta)
+
+    return nova_consulta
+
+
+@app.post(
+    "/consultas/agendar-imediato",
+    response_model=ConsultaResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Consultas"],
+    summary="Psicóloga agenda consulta direta sem restrição de 2 dias de antecedência (Privado)"
+)
+def agendar_consulta_psicologa(
+    consulta_in: ConsultaCreate,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    psicologa = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+    if not psicologa or psicologa.tipo != UserType.Psicologo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas psicólogas podem realizar agendamentos diretos."
         )
 
     paciente = db.query(User).filter(User.id == consulta_in.paciente_id).first()
     if not paciente:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Paciente com ID {consulta_in.paciente_id} não foi encontrado."
-        )
-    if paciente.tipo != UserType.Paciente:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"O usuário de ID {consulta_in.paciente_id} não é um paciente."
+            detail="Paciente não encontrado."
         )
 
-    # Valida todas as regras de negócio: antecedência mínima, dias úteis, horário comercial, hora cheia e anti-choque!
+    # Psicóloga agendando: NÃO exige os 2 dias de antecedência!
     data_hora_fim = validar_regras_agendamento(
         db=db,
         psicologa=psicologa,
-        data_hora_inicio_solicitada=consulta_in.data_hora_inicio
+        data_hora_inicio_solicitada=consulta_in.data_hora_inicio,
+        exigir_antecedencia=False
     )
 
-    link = consulta_in.link_reuniao or None # caso ainda não tenha link para a reunião
-
     nova_consulta = Consultas(
-        psicologa_id=consulta_in.psicologa_id,
-        paciente_id=consulta_in.paciente_id,
+        psicologa_id=psicologa.id,
+        paciente_id=paciente.id,
         data_hora_inicio=consulta_in.data_hora_inicio,
         data_hora_fim=data_hora_fim,
-        status=Status.AGENDADA,
-        link_reuniao=link
+        status=Status.CONFIRMADA,
+        link_reuniao=consulta_in.link_reuniao
     )
 
     db.add(nova_consulta)
@@ -457,21 +580,132 @@ def agendar_consulta(consulta_in: ConsultaCreate, db: Session = Depends(get_db))
 def listar_consultas(
     paciente_id: Optional[int] = Query(None, description="Filtrar por ID do paciente"),
     psicologa_id: Optional[int] = Query(None, description="Filtrar por ID da psicóloga"),
-    usuario_logado: dict = Depends(obter_usuario_logado),  # Rota protegida! Exige Token JWT válido
+    status_filtro: Optional[Status] = Query(None, description="Filtrar por Status"),
+    usuario_logado: dict = Depends(obter_usuario_logado),
     db: Session = Depends(get_db)
 ):
-    """
-    Esta rota agora é PRIVADA:
-    Apenas usuários autenticados (portadores de um token JWT válido) conseguem ver a lista de consultas.
-    """
     query = db.query(Consultas)
-    
     if paciente_id:
         query = query.filter(Consultas.paciente_id == paciente_id)
     if psicologa_id:
         query = query.filter(Consultas.psicologa_id == psicologa_id)
-        
-    return query.all()
+    if status_filtro:
+        query = query.filter(Consultas.status == status_filtro)
+    return query.order_by(Consultas.data_hora_inicio.asc()).all()
+
+
+@app.patch(
+    "/consultas/{consulta_id}/aprovar",
+    response_model=ConsultaResponse,
+    tags=["Consultas"],
+    summary="Psicóloga aprova a consulta solicitada ou pedido de troca (Privado)"
+)
+def aprovar_consulta(
+    consulta_id: int,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    consulta = db.query(Consultas).filter(Consultas.id == consulta_id).first()
+    if not consulta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Consulta não encontrada."
+        )
+
+    # Se esta consulta for um pedido de troca de uma consulta anterior
+    if consulta.reagendamento_de_id:
+        consulta_antiga = db.query(Consultas).filter(Consultas.id == consulta.reagendamento_de_id).first()
+        if consulta_antiga:
+            consulta_antiga.status = Status.CANCELADA
+
+    consulta.status = Status.CONFIRMADA
+    db.commit()
+    db.refresh(consulta)
+
+    # Dispara mensagem WhatsApp informando a aprovação
+    try:
+        processar_notificacao_status(consulta, aprovado=True)
+    except Exception as e:
+        print(f"Erro ao notificar WhatsApp: {e}")
+
+    return consulta
+
+
+@app.patch(
+    "/consultas/{consulta_id}/recusar",
+    response_model=ConsultaResponse,
+    tags=["Consultas"],
+    summary="Psicóloga recusa o horário solicitado pelo paciente (Privado)"
+)
+def recusar_consulta(
+    consulta_id: int,
+    dados: RecusarConsultaRequest,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    consulta = db.query(Consultas).filter(Consultas.id == consulta_id).first()
+    if not consulta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Consulta não encontrada."
+        )
+
+    consulta.status = Status.RECUSADA
+    consulta.justificativa_recusa = dados.justificativa
+    db.commit()
+    db.refresh(consulta)
+
+    # Dispara mensagem WhatsApp informando a recusa
+    try:
+        processar_notificacao_status(consulta, aprovado=False, justificativa=dados.justificativa)
+    except Exception as e:
+        print(f"Erro ao notificar WhatsApp: {e}")
+
+    return consulta
+
+
+@app.post(
+    "/consultas/{consulta_id}/solicitar-troca",
+    response_model=ConsultaResponse,
+    tags=["Consultas"],
+    summary="Paciente solicita troca de horário da sua consulta (Exige 2 dias de antecedência)"
+)
+def solicitar_troca_consulta(
+    consulta_id: int,
+    reagendar_in: ConsultaReagendar,
+    db: Session = Depends(get_db)
+):
+    consulta_atual = db.query(Consultas).filter(Consultas.id == consulta_id).first()
+    if not consulta_atual:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Consulta não encontrada."
+        )
+
+    # Paciente solicitando troca: EXIGE antecedência mínima de 2 dias!
+    nova_data_fim = validar_regras_agendamento(
+        db=db,
+        psicologa=consulta_atual.psicologa,
+        data_hora_inicio_solicitada=reagendar_in.data_hora_inicio,
+        consulta_id_ignorar=consulta_atual.id,
+        exigir_antecedencia=True
+    )
+
+    # Cria uma nova solicitação pendente vinculada à anterior
+    solicitacao_troca = Consultas(
+        psicologa_id=consulta_atual.psicologa_id,
+        paciente_id=consulta_atual.paciente_id,
+        data_hora_inicio=reagendar_in.data_hora_inicio,
+        data_hora_fim=nova_data_fim,
+        status=Status.PENDENTE_APROVACAO,
+        reagendamento_de_id=consulta_atual.id,
+        link_reuniao=consulta_atual.link_reuniao
+    )
+
+    db.add(solicitacao_troca)
+    db.commit()
+    db.refresh(solicitacao_troca)
+    return solicitacao_troca
 
 
 @app.get(
@@ -536,7 +770,7 @@ def agendar_novamente_consulta(
             detail=f"Consulta com ID {consulta_id} não foi encontrada."
         )
         
-    consulta.status = Status.AGENDADA
+    consulta.status = Status.CONFIRMADA
     db.commit()
     db.refresh(consulta)
     return consulta
@@ -605,7 +839,7 @@ def reagendar_consulta(
 
     consulta.data_hora_inicio = reagendar_in.data_hora_inicio
     consulta.data_hora_fim = nova_data_fim
-    consulta.status = Status.AGENDADA
+    consulta.status = Status.CONFIRMADA
     db.commit()
     db.refresh(consulta)
     return consulta
@@ -633,10 +867,10 @@ def disparar_lembrete_manual(
             detail=f"Consulta com ID {consulta_id} não foi encontrada."
         )
 
-    if consulta.status != Status.AGENDADA:
+    if consulta.status != Status.CONFIRMADA:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Não é possível enviar lembrete para uma consulta com status '{consulta.status.value}'."
+            detail=f"Não é possível enviar lembrete para uma consulta com status '{consulta.status.value}'. Apenas consultas confirmadas recebem lembrete."
         )
 
     sucesso = processar_lembrete_consulta(consulta)

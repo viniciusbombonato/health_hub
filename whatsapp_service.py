@@ -82,9 +82,51 @@ def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
     return True
 
 
+def formatar_mensagem_aprovacao(consulta: Consultas) -> str:
+    """Mensagem de confirmação enviada quando a psicóloga aprova a sessão."""
+    paciente = consulta.paciente
+    psicologa = consulta.psicologa
+    fuso_paciente = ZoneInfo(paciente.time_zone)
+    horario_local = consulta.data_hora_inicio.astimezone(fuso_paciente)
+
+    data_formatada = horario_local.strftime("%d/%m/%Y")
+    hora_formatada = horario_local.strftime("%H:%M")
+    nome_fuso = horario_local.tzname()
+
+    return (
+        f"Olá, {paciente.full_name}! ✨\n\n"
+        f"Sua sessão com a psicóloga {psicologa.full_name} foi CONFIRMADA!\n"
+        f"📅 Data: {data_formatada}\n"
+        f"⏰ Horário: {hora_formatada} ({nome_fuso})\n\n"
+        f"Nos vemos em breve!"
+    )
+
+
+def formatar_mensagem_recusa(consulta: Consultas, justificativa: str | None = None) -> str:
+    """Mensagem enviada se a psicóloga não puder no horário solicitado."""
+    paciente = consulta.paciente
+    psicologa = consulta.psicologa
+    motivo = f"\nMotivo: {justificativa}" if justificativa else ""
+
+    return (
+        f"Olá, {paciente.full_name}.\n\n"
+        f"A psicóloga {psicologa.full_name} não pôde aprovar o horário solicitado.{motivo}\n\n"
+        f"Por favor, acesse o link de agendamento para escolher outro dia ou entre em contato diretamente pelo WhatsApp."
+    )
+
+
+def processar_notificacao_status(consulta: Consultas, aprovado: bool, justificativa: str | None = None) -> bool:
+    """Dispara mensagem informando paciente sobre aprovação ou recusa do horário."""
+    if aprovado:
+        msg = formatar_mensagem_aprovacao(consulta)
+    else:
+        msg = formatar_mensagem_recusa(consulta, justificativa)
+    return enviar_mensagem_whatsapp(consulta.paciente.phone, msg)
+
+
 def processar_lembrete_consulta(consulta: Consultas) -> bool:
     """
-    Gera o texto contextualizado e dispara o envio do lembrete.
+    Gera o texto contextualizado e dispara o envio do lembrete periódico.
     """
     mensagem = formatar_mensagem_lembrete(consulta)
     sucesso = enviar_mensagem_whatsapp(
@@ -92,3 +134,5 @@ def processar_lembrete_consulta(consulta: Consultas) -> bool:
         mensagem=mensagem
     )
     return sucesso
+
+

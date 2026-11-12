@@ -35,7 +35,9 @@ class HorarioUTC(TypeDecorator):
 
 
 class Status(PyEnum):
-    AGENDADA = "agendada"
+    PENDENTE_APROVACAO = "pendente_aprovacao"
+    CONFIRMADA = "confirmada"
+    RECUSADA = "recusada"
     REALIZADA = "realizada"
     CANCELADA = "cancelada"
 
@@ -51,10 +53,20 @@ class Consultas(Base):
     data_hora_inicio: Mapped[datetime] = mapped_column(HorarioUTC, index=True, nullable=False)
     data_hora_fim: Mapped[datetime] = mapped_column(HorarioUTC, index=True, nullable=False)
 
-    status: Mapped[Status] = mapped_column(SQLEnum(Status, native_enum=False), default=Status.AGENDADA, index=True, nullable=False)
+    status: Mapped[Status] = mapped_column(
+        SQLEnum(Status, native_enum=False),
+        default=Status.PENDENTE_APROVACAO,
+        index=True,
+        nullable=False
+    )
     link_reuniao: Mapped[str] = mapped_column(String(500), nullable=True)
 
     lembrete_enviado: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Detalhes da solicitação ou recusa
+    justificativa_recusa: Mapped[str] = mapped_column(String(255), nullable=True)
+    # Se for proposta de reagendamento de uma consulta anterior
+    reagendamento_de_id: Mapped[int] = mapped_column(Integer, nullable=True)
 
     # Relacionamento de tabelas
     psicologa = relationship("User", foreign_keys=[psicologa_id], back_populates="consultas_como_psicologa")

@@ -407,11 +407,30 @@
           const tr = document.createElement("tr");
           tr.className = "hover:bg-slate-50/80 transition";
 
-          // Status badge
-          let statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">Agendada</span>`;
-          if (c.status === "cancelada") {
-            statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800">Cancelada</span>`;
-          }
+            // Status badge handling for multiple statuses
+            let statusBadge = '';
+            let actionButtons = '';
+            switch (c.status) {
+              case 'pendente_aprovacao':
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800">Pendente Aprovação</span>`;
+                actionButtons = `
+                  <button onclick="aprovarConsulta(${c.id})" class="px-2.5 py-1 text-xs bg-teal-50 text-teal-800 hover:bg-teal-100 rounded-lg border border-teal-200 transition" title="Aprovar consulta">
+                    ✅ Aprovar
+                  </button>
+                  <button onclick="recusarConsulta(${c.id})" class="px-2.5 py-1 text-xs bg-rose-50 text-rose-800 hover:bg-rose-100 rounded-lg border border-rose-200 transition" title="Recusar consulta">
+                    ❌ Recusar
+                  </button>`;
+                break;
+              case 'confirmada':
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">Confirmada</span>`;
+                break;
+              case 'cancelada':
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800">Cancelada</span>`;
+                break;
+              default:
+                // fallback to original agendada badge
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">Agendada</span>`;
+            }
 
           // Lembrete badge
           const lembreteBadge = c.lembrete_enviado 
@@ -428,7 +447,8 @@
             <td class="p-4">${statusBadge}</td>
             <td class="p-4">${lembreteBadge}</td>
             <td class="p-4 text-right space-x-1.5 whitespace-nowrap">
-              ${c.status === 'agendada' ? `
+              ${actionButtons}
+              ${c.status === 'confirmada' ? `
                 <button 
                   onclick="dispararLembreteManual(${c.id})" 
                   class="px-2.5 py-1 text-xs bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition"
@@ -442,9 +462,8 @@
                 >
                   Cancelar
                 </button>
-              ` : `
-                <span class="text-slate-300 text-xs">—</span>
-              `}
+              ` : ``}
+            </td>
             </td>
           `;
 

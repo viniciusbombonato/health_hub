@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Psicóloga | Health Hub</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {font-family: 'Plus Jakarta Sans', sans-serif;}
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 border border-slate-100">
+    <h1 class="text-2xl font-bold text-center mb-4">Cadastro de Psicóloga</h1>
+    <p class="text-xs text-slate-500 text-center mb-6">Preencha os campos abaixo para criar seu usuário.</p>
+    <form id="form-cadastro-psicologa" class="space-y-4" onsubmit="cadastrarPsicologa(event)">
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo:</label>
+        <input type="text" id="full_name" required placeholder="Ex.: Ana Silva" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Usuário (login):</label>
+        <input type="text" id="username" required placeholder="ex: ana_psicologa" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Senha:</label>
+        <input type="password" id="password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Idade:</label>
+        <input type="number" id="age" required min="18" placeholder="30" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">País:</label>
+          <select id="country" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Fuso Horário:</label>
+          <select id="timezone" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"></select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp (com DDD):</label>
+        <input type="tel" id="phone" required placeholder="(11) 98765-4321" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+      </div>
+      <p id="msg-erro" class="hidden text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200"></p>
+      <button type="submit" id="btn-cadastrar" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-xl transition duration-200 shadow-md shadow-teal-600/20">
+        Cadastrar Psicóloga
+      </button>
+    </form>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('health_hub_token'); // mantenha login se já estiver autenticado
+    // Carregar opções de países e fusos (mesmo endpoint usado no painel)
+    async function carregarListas() {
+      try {
+        const [pRes, tRes] = await Promise.all([
+          fetch('/util/paises'),
+          fetch('/util/fusos')
+        ]);
+        if (pRes.ok) {
+          const paises = await pRes.json();
+          const sel = document.getElementById('country');
+          sel.innerHTML = '';
+          paises.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.codigo;
+            opt.innerText = `${p.nome} (${p.codigo})`;
+            sel.appendChild(opt);
+          });
+        }
+        if (tRes.ok) {
+          const fusos = await tRes.json();
+          const sel = document.getElementById('timezone');
+          sel.innerHTML = '';
+          fusos.forEach(tz => {
+            const opt = document.createElement('option');
+            opt.value = tz;
+            opt.innerText = tz;
+            sel.appendChild(opt);
+          });
+        }
+      } catch (e) { console.error('Erro ao carregar listas', e); }
+    }
+    document.addEventListener('DOMContentLoaded', carregarListas);
+
+    async function cadastrarPsicologa(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-cadastrar');
+      const erroBox = document.getElementById('msg-erro');
+      erroBox.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerText = 'Cadastrando...';
+      const payload = {
+        full_name: document.getElementById('full_name').value.trim(),
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value,
+        age: parseInt(document.getElementById('age').value, 10),
+        country: document.getElementById('country').value,
+        time_zone: document.getElementById('timezone').value,
+        phone: document.getElementById('phone').value.trim(),
+        tipo: 'psicologo' // enum value expected by backend
+      };
+      try {
+        const res = await fetch('/usuarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`Psicóloga ${data.full_name} cadastrada com sucesso!`);
+          // opcional: redirecionar para painel
+          window.location.href = '/painel';
+        } else {
+          erroBox.innerText = data.detail || 'Erro ao cadastrar.';
+          erroBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error(err);
+        erroBox.innerText = 'Erro de conexão.';
+        erroBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Cadastrar Psicóloga';
+      }
+    }
+  </script>
+</body>
+</html>

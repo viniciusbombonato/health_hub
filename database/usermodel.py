@@ -11,6 +11,12 @@ class UserType(PyEnum):
     Paciente = "paciente"
 
 
+class RecorrenciaTipo(PyEnum):
+    SEMANAL = "semanal"
+    QUINZENAL = "quinzenal"
+    AVULSO = "avulso"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -29,6 +35,17 @@ class User(Base):
     time_zone: Mapped[str] = mapped_column(String(50), default="America/Sao_Paulo", nullable=False)
    
     phone: Mapped[str] = mapped_column(String(30), nullable=False, unique=True, index=True)
+
+    # Configurações de Atendimento Recorrente (Apenas para pacientes)
+    tipo_recorrencia: Mapped[RecorrenciaTipo] = mapped_column(
+        SQLEnum(RecorrenciaTipo, native_enum=False),
+        default=RecorrenciaTipo.SEMANAL,
+        nullable=True
+    )
+    # 0 = Segunda, 1 = Terça, 2 = Quarta, 3 = Quinta, 4 = Sexta
+    dia_semana_fixo: Mapped[int] = mapped_column(Integer, nullable=True)
+    # Formato "HH:MM", ex: "16:00"
+    horario_fixo: Mapped[str] = mapped_column(String(10), nullable=True)
 
     # Relacionamento entre tabelas
     consultas_como_paciente: Mapped[list["Consultas"]] = relationship(

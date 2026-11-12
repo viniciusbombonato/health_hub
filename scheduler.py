@@ -28,9 +28,9 @@ def verificar_e_enviar_lembretes():
         agora_utc = datetime.now(timezone.utc)
         limite_24h_utc = agora_utc + timedelta(hours=24)
 
-        # Buscamos consultas agendadas entre agora e as próximas 24h
+        # Buscamos consultas CONFIRMADAS entre agora e as próximas 24h
         consultas_pendentes = db.query(Consultas).filter(
-            Consultas.status == Status.AGENDADA,
+            Consultas.status == Status.CONFIRMADA,
             Consultas.lembrete_enviado == False,
             Consultas.data_hora_inicio >= agora_utc,
             Consultas.data_hora_inicio <= limite_24h_utc
