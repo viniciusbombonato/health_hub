@@ -78,6 +78,10 @@ def pagina_agendar():
 def pagina_painel():
     return FileResponse(STATIC_DIR / "painel.html")
 
+@app.get("/registrar-psicologo", tags=["Frontend"], summary="Registrar novo psicólogo")
+def pagina_registrar():
+    return FileResponse(STATIC_DIR / "register_psicologa.html.html")
+
 
 # ==============================================================================
 # ENDPOINTS UTILITÁRIOS (METADADOS DE PAÍSES E FUSOS HORÁRIOS)
