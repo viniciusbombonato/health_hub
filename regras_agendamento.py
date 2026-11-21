@@ -52,22 +52,17 @@ def validar_regras_agendamento(
 
     # --------------------------------------------------------------------------
     # REGRA 2: Antecedência mínima
-    # Paciente: 2 dias de antecedência (a partir das 08:00 do segundo dia útil/corrido).
+    # Paciente: 24 horas de antecedência.
     # Psicóloga: sem antecedência mínima, apenas não pode agendar no passado.
     # --------------------------------------------------------------------------
     if exigir_antecedencia:
-        data_minima_permitida = agora.date() + timedelta(days=2)
-        horario_minimo_permitido = datetime.combine(
-            data_minima_permitida,
-            time(hour=HORA_INICIO_ATENDIMENTO),
-            tzinfo=fuso_psicologa
-        )
+        horario_minimo_permitido = agora + timedelta(hours=24)
 
         if inicio_local < horario_minimo_permitido:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    f"Agendamentos de pacientes exigem no mínimo 2 dias de antecedência. "
+                    f"Agendamentos de pacientes exigem no mínimo 24 horas de antecedência. "
                     f"O próximo horário disponível mais cedo é {horario_minimo_permitido.strftime('%d/%m/%Y às %H:%M (%Z)')}."
                 )
             )
@@ -144,14 +139,9 @@ def obter_horarios_disponiveis(
     if dia_desejado.weekday() >= 5:
         return []
 
-    # 2. Regra de antecedência mínima de 2 dias (a partir das 08:00) se for paciente
+    # 2. Regra de antecedência mínima de 24 horas se for paciente
     if exigir_antecedencia:
-        data_minima_permitida = agora.date() + timedelta(days=2)
-        horario_minimo_permitido = datetime.combine(
-            data_minima_permitida,
-            time(hour=HORA_INICIO_ATENDIMENTO),
-            tzinfo=fuso_psicologa
-        )
+        horario_minimo_permitido = agora + timedelta(hours=24)
     else:
         horario_minimo_permitido = agora
 

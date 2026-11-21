@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carolina Bombonato | Psicóloga Clínica</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-serif-italic { font-family: 'Playfair Display', serif; font-style: italic; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+  <!-- Navbar / Header simples -->
+  <header class="w-full bg-white/80 backdrop-blur border-b border-slate-100 sticky top-0 z-20">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌿</span>
+        <span class="font-bold text-slate-800 tracking-tight text-lg">Health Hub</span>
+      </div>
+      <nav class="flex items-center gap-4">
+        <a href="#sobre" class="text-sm font-medium text-slate-600 hover:text-teal-700 transition hidden sm:inline">Sobre</a>
+        <a href="#contato" class="text-sm font-medium text-slate-600 hover:text-teal-700 transition hidden sm:inline">Contato</a>
+        <a href="/login" class="text-sm font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-4 py-2 rounded-xl transition">
+          Área do Paciente / Login
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative overflow-hidden pt-16 pb-20 sm:pt-24 sm:pb-28 text-center px-4">
+    <div class="max-w-3xl mx-auto">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-50 border border-teal-200/60 text-teal-800 text-xs font-semibold mb-6 shadow-sm">
+        <span>✨</span> Atendimento Online Humanizado
+      </div>
+
+      <!-- Palavra "psicóloga" em fonte estilizada -->
+      <h2 class="font-serif-italic text-3xl sm:text-5xl text-teal-700 font-semibold mb-3 tracking-wide">
+        Psicóloga
+      </h2>
+
+      <!-- Nome "Carolina Bombonato" centralizado em fonte padrão -->
+      <h1 class="text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight mb-6">
+        Carolina Bombonato
+      </h1>
+
+      <p class="text-base sm:text-lg text-slate-600 max-w-xl mx-auto mb-8 leading-relaxed">
+        Cuidado emocional e desenvolvimento pessoal através da Terapia Cognitivo-Comportamental, no conforto do seu espaço.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a 
+          href="https://wa.me/5518996728160?text=Ol%C3%A1%2C%20Carolina!%20Gostaria%20de%20marcar%20uma%20consulta."
+          target="_blank"
+          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8 py-3.5 rounded-2xl shadow-lg shadow-emerald-600/25 transition active:scale-[0.99]"
+        >
+          <span>💬</span> Marcar Consulta no WhatsApp
+        </a>
+        <a 
+          href="/painel-paciente" 
+          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-8 py-3.5 rounded-2xl border border-slate-200 shadow-sm transition"
+        >
+          Área do Paciente →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seção Sobre -->
+  <section id="sobre" class="py-16 bg-white border-y border-slate-100 px-4">
+    <div class="max-w-4xl mx-auto">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+        
+        <div class="md:col-span-5 flex justify-center">
+          <div class="w-64 h-64 sm:w-72 sm:h-72 rounded-3xl bg-gradient-to-tr from-teal-100 via-teal-50 to-slate-100 border border-teal-200/60 shadow-xl flex flex-col items-center justify-center text-center p-6">
+            <div class="w-24 h-24 rounded-full bg-teal-600 text-white flex items-center justify-center text-4xl font-serif-italic shadow-md mb-4">
+              CB
+            </div>
+            <h3 class="font-bold text-slate-800 text-lg">Carolina Bombonato</h3>
+            <p class="text-xs text-teal-700 font-medium">Psicologia Clínica</p>
+            <span class="mt-3 px-3 py-1 bg-white rounded-full text-[11px] font-semibold text-slate-600 border border-slate-200 shadow-sm">
+              20 anos de atuação
+            </span>
+          </div>
+        </div>
+
+        <div class="md:col-span-7 space-y-5 text-left">
+          <span class="text-xs font-bold text-teal-700 uppercase tracking-widest">Sobre Mim</span>
+          <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+            Acolhimento com embasamento científico e mais de 20 anos de experiência clínica.
+          </h2>
+          <p class="text-slate-600 leading-relaxed text-sm sm:text-base">
+            Sou psicóloga com trajetória dedicada ao bem-estar e saúde mental. Há <strong>20 anos</strong> ajudo pessoas a compreenderem seus pensamentos, emoções e comportamentos, promovendo mudanças significativas e duradouras.
+          </p>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+              <span class="text-xl">🌐</span>
+              <h4 class="font-bold text-slate-800 text-sm mt-2">Atendimento 100% Online</h4>
+              <p class="text-xs text-slate-500 mt-1">Sessões flexíveis e seguras de onde você estiver, no Brasil e no exterior.</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+              <span class="text-xl">🧠</span>
+              <h4 class="font-bold text-slate-800 text-sm mt-2">Abordagem TCC</h4>
+              <p class="text-xs text-slate-500 mt-1">Terapia Cognitivo-Comportamental: prática, focada em metas e comprovada cientificamente.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Seção CTA Consulta WhatsApp -->
+  <section id="contato" class="py-16 text-center px-4">
+    <div class="max-w-2xl mx-auto bg-gradient-to-br from-teal-700 to-teal-900 rounded-3xl p-8 sm:p-12 text-white shadow-xl shadow-teal-900/10">
+      <span class="text-4xl block mb-3">💬</span>
+      <h2 class="text-2xl sm:text-3xl font-bold mb-3 tracking-tight">Pronto para dar o próximo passo?</h2>
+      <p class="text-teal-100 text-sm sm:text-base max-w-lg mx-auto mb-8 leading-relaxed">
+        Entre em contato diretamente para tirar dúvidas, saber mais sobre a abordagem ou agendar sua primeira sessão de triagem.
+      </p>
+      <a 
+        href="https://wa.me/5518996728160?text=Ol%C3%A1%2C%20Carolina!%20Gostaria%20de%20marcar%20uma%20consulta."
+        target="_blank"
+        class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-8 py-4 rounded-2xl shadow-lg transition active:scale-[0.99] text-base"
+      >
+        <span>📱</span> Falar no WhatsApp (18) 99672-8160
+      </a>
+    </div>
+  </section>
+
+  <!-- Seção Já é paciente? -->
+  <section class="py-14 bg-slate-100/70 border-t border-slate-200/60 text-center px-4">
+    <div class="max-w-xl mx-auto">
+      <div class="w-12 h-12 mx-auto rounded-full bg-white text-teal-700 flex items-center justify-center text-xl font-bold mb-3 shadow-sm border border-slate-200">
+        🔑
+      </div>
+      <h3 class="text-xl font-bold text-slate-900 mb-2">Já é paciente?</h3>
+      <p class="text-sm text-slate-600 mb-6">
+        Acesse sua área exclusiva para consultar suas próximas sessões, solicitar remarcação ou gerenciar sua frequência.
+      </p>
+      <a 
+        href="/painel-paciente" 
+        class="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md shadow-teal-600/20"
+      >
+        Acessar Área do Paciente →
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-6 text-center text-xs text-slate-400 border-t border-slate-200/50 bg-white">
+    <p>© 2026 Dra. Carolina Bombonato • Psicologia Clínica Online • CRP 06/123456</p>
+    <p class="mt-1">Health Hub • Plataforma Segura em conformidade com o Código de Ética e LGPD</p>
+  </footer>
+
+</body>
+</html>

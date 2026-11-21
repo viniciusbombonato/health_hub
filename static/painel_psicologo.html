@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel da Psicóloga | Dra. Carolina Bombonato</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.98); }
+    }
+    .animate-pulse-slow {
+      animation: pulse-slow 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🌿</span>
+      <div>
+        <h1 class="text-base font-bold text-slate-900 leading-none">Consultório Dra. Carolina Bombonato</h1>
+        <span class="text-xs text-teal-700 font-medium">Painel de Gestão Clínica</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <span id="nome-psicologa-topo" class="text-xs font-semibold text-slate-700 hidden sm:inline">Dra. Carolina</span>
+      <button 
+        onclick="fazerLogout()" 
+        class="text-xs text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 px-3 py-1.5 rounded-lg transition"
+      >
+        Sair
+      </button>
+    </div>
+  </header>
+
+  <!-- Navegação de Seções / Abas -->
+  <div class="bg-white border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 flex gap-2 py-3 overflow-x-auto">
+      <button 
+        id="tab-btn-pacientes"
+        onclick="trocarAba('pacientes')"
+        class="px-4 py-2 text-xs font-bold rounded-xl bg-teal-600 text-white shadow-sm transition whitespace-nowrap"
+      >
+        👥 Pacientes Cadastrados
+      </button>
+      <button 
+        id="tab-btn-calendario"
+        onclick="trocarAba('calendario')"
+        class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap"
+      >
+        📅 Calendário Semanal
+      </button>
+      <button 
+        id="tab-btn-registro"
+        onclick="trocarAba('registro')"
+        class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap"
+      >
+        ➕ Registrar Novo Usuário
+      </button>
+    </div>
+  </div>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-8">
+
+    <!-- ========================================================================= -->
+    <!-- SEÇÃO 1: TABELA EXPANSÍVEL DE PACIENTES                                    -->
+    <!-- ========================================================================= -->
+    <section id="aba-pacientes" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Lista de Pacientes da Clínica</h2>
+          <p class="text-xs text-slate-500">Visualize todos os pacientes, status de recorrência, notificações e links diretos de WhatsApp.</p>
+        </div>
+        <div class="flex gap-2">
+          <button 
+            onclick="carregarPacientes()" 
+            class="text-xs bg-teal-50 hover:bg-teal-100 text-teal-800 font-semibold px-4 py-2 rounded-xl transition border border-teal-200 flex items-center gap-1.5"
+          >
+            🔄 Atualizar Tabela
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="p-4">Nome (full name)</th>
+                <th class="p-4">Recorrência</th>
+                <th class="p-4">Horário</th>
+                <th class="p-4">Ativo</th>
+                <th class="p-4">Notificação</th>
+                <th class="p-4 text-center">WhatsApp</th>
+                <th class="p-4 text-right">Editar</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-pacientes-corpo" class="divide-y divide-slate-100 text-slate-700">
+              <tr>
+                <td colspan="7" class="p-8 text-center text-slate-400">Carregando pacientes...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SEÇÃO 2: CALENDÁRIO SEMANAL DE CONSULTAS                                   -->
+    <!-- ========================================================================= -->
+    <section id="aba-calendario" class="hidden space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Agenda Semanal de Consultas</h2>
+          <p class="text-xs text-slate-500">Segunda a Domingo. Cards em verde são consultas confirmadas; cards piscando em roxo claro são pendentes.</p>
+        </div>
+        
+        <!-- Toggle com setas para semana anterior e próxima -->
+        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-slate-200 shadow-sm">
+          <button 
+            onclick="navegarSemana(-1)" 
+            title="Semana Anterior"
+            class="p-2 hover:bg-slate-100 rounded-xl transition text-slate-600 font-bold"
+          >
+            ◀
+          </button>
+          <span id="label-periodo-semana" class="text-xs font-bold text-slate-800 min-w-[190px] text-center">
+            --/-- a --/--/----
+          </span>
+          <button 
+            onclick="navegarSemana(1)" 
+            title="Próxima Semana"
+            class="p-2 hover:bg-slate-100 rounded-xl transition text-slate-600 font-bold"
+          >
+            ▶
+          </button>
+          <button 
+            onclick="irParaSemanaAtual()" 
+            class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-2.5 py-1.5 rounded-lg ml-1 transition"
+          >
+            Hoje
+          </button>
+        </div>
+      </div>
+
+      <!-- Legenda Visual -->
+      <div class="flex flex-wrap items-center gap-4 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="w-3.5 h-3.5 rounded-md bg-emerald-100 border border-emerald-300"></span>
+          <span class="text-slate-600 font-medium">Confirmada</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-3.5 h-3.5 rounded-md bg-purple-100 border border-purple-300 animate-pulse-slow"></span>
+          <span class="text-slate-600 font-medium">Pendente de Aprovação (3s pulsação)</span>
+        </div>
+        <div class="text-slate-400 text-[11px]">
+          * Clique ou passe o mouse nos cards para expandir informações do paciente e opções.
+        </div>
+      </div>
+
+      <!-- Grade do Calendário (Segunda a Domingo) -->
+      <div class="grid grid-cols-1 md:grid-cols-7 gap-3" id="grade-calendario-semanal">
+        <!-- Colunas dos 7 dias preenchidas via JS -->
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- SEÇÃO 3: REGISTRAR NOVO USUÁRIO (PACIENTE OU PSICÓLOGO)                    -->
+    <!-- ========================================================================= -->
+    <section id="aba-registro" class="hidden max-w-2xl mx-auto">
+      <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
+        <div class="mb-6">
+          <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-xl font-bold mb-3 shadow-inner">
+            👤
+          </div>
+          <h2 class="text-xl font-bold text-slate-900">Registrar Novo Usuário</h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Cadastre um novo <strong>paciente</strong> ou <strong>psicólogo</strong>. O número de WhatsApp cadastrado será usado para acesso e login.
+          </p>
+        </div>
+
+        <form id="form-novo-usuario" onsubmit="registrarNovoUsuario(event)" class="space-y-4 text-left">
+          
+          <!-- Escolha do Tipo -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-2">Tipo de Usuário:</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="cursor-pointer border-2 border-teal-500 bg-teal-50 p-3 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-800 radio-tipo">
+                <input type="radio" name="novo_tipo" value="paciente" checked onchange="trocarTipoRegistro()" class="accent-teal-600">
+                <span>👤 Paciente</span>
+              </label>
+              <label class="cursor-pointer border-2 border-slate-200 bg-white p-3 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-800 radio-tipo">
+                <input type="radio" name="novo_tipo" value="psicologo" onchange="trocarTipoRegistro()" class="accent-teal-600">
+                <span>🩺 Psicólogo</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Nome Completo -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo (full_name):</label>
+            <input 
+              type="text" 
+              id="novo-nome" 
+              required 
+              maxlength="120"
+              placeholder="Ex.: Mariana Vasconcelos"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            >
+          </div>
+
+          <!-- País e Telefone WhatsApp -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">País:</label>
+              <select id="novo-pais" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                <option value="BR">🇧🇷 Brasil (+55)</option>
+                <option value="PT">🇵🇹 Portugal (+351)</option>
+                <option value="US">🇺🇸 Estados Unidos (+1)</option>
+                <option value="ES">🇪🇸 Espanha (+34)</option>
+                <option value="UK">🇬🇧 Reino Unido (+44)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp (com DDD):</label>
+              <input 
+                type="tel" 
+                id="novo-telefone" 
+                required 
+                placeholder="(11) 98888-7777"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+              >
+            </div>
+          </div>
+
+          <!-- Fuso Horário e Idade -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Fuso Horário:</label>
+              <select id="novo-timezone" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                <option value="America/Sao_Paulo">🇧🇷 Horário de Brasília (America/Sao_Paulo)</option>
+                <option value="Europe/Lisbon">🇵🇹 Lisboa / Portugal (Europe/Lisbon)</option>
+                <option value="Europe/London">🇬🇧 Londres / UK (Europe/London)</option>
+                <option value="Europe/Madrid">🇪🇸 Madri / Espanha (Europe/Madrid)</option>
+                <option value="America/New_York">🇺🇸 Nova York / EUA (America/New_York)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Idade:</label>
+              <input 
+                type="number" 
+                id="novo-idade" 
+                min="1" 
+                max="125" 
+                value="30"
+                required
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+              >
+            </div>
+          </div>
+
+          <!-- Campos Específicos para Paciente (Recorrência) -->
+          <div id="campos-paciente-recorrencia" class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+            <span class="text-xs font-bold text-slate-700 block">Configurações de Recorrência (Opcional):</span>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Frequência:</label>
+                <select id="novo-recorrencia-tipo" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                  <option value="semanal">Semanal</option>
+                  <option value="quinzenal">Quinzenal</option>
+                  <option value="avulso">Avulso</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Dia Fixo:</label>
+                <select id="novo-dia-fixo" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                  <option value="">Sem dia fixo</option>
+                  <option value="0">Segunda-feira</option>
+                  <option value="1">Terça-feira</option>
+                  <option value="2">Quarta-feira</option>
+                  <option value="3">Quinta-feira</option>
+                  <option value="4">Sexta-feira</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Horário Fixo:</label>
+                <select id="novo-horario-fixo" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                  <option value="">Sem horário fixo</option>
+                  <option value="08:00">08:00</option>
+                  <option value="09:00">09:00</option>
+                  <option value="10:00">10:00</option>
+                  <option value="11:00">11:00</option>
+                  <option value="14:00">14:00</option>
+                  <option value="15:00">15:00</option>
+                  <option value="16:00">16:00</option>
+                  <option value="17:00">17:00</option>
+                </select>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400">Se preenchido dia e horário fixo, a agenda das próximas 8 semanas será preenchida automaticamente.</p>
+          </div>
+
+          <!-- Campos Específicos para Psicólogo (Username e Senha personalizados) -->
+          <div id="campos-psicologo" class="hidden p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+            <span class="text-xs font-bold text-slate-700 block">Credenciais do Psicólogo:</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Nome de Usuário (login):</label>
+                <input 
+                  type="text" 
+                  id="novo-username-psi" 
+                  placeholder="ex.: carol_oficial"
+                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                >
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Senha de Acesso:</label>
+                <input 
+                  type="password" 
+                  id="novo-senha-psi" 
+                  placeholder="Mínimo 6 caracteres"
+                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 bg-teal-50/60 p-3 rounded-xl border border-teal-200/60">
+            ℹ️ Para novos <strong>pacientes</strong>, a senha provisória inicial gerada é <strong>123456</strong> e o username é gerado automaticamente (ex: mariana_7777). O paciente poderá trocar a senha no painel dele.
+          </div>
+
+          <button 
+            type="submit" 
+            id="btn-cadastrar-usuario"
+            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3.5 rounded-xl transition shadow-md shadow-teal-600/20 text-sm"
+          >
+            Cadastrar Novo Usuário
+          </button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 1: EDITAR PACIENTE                                                  -->
+  <!-- ========================================================================= -->
+  <div id="modal-editar-paciente" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 text-left space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-base font-bold text-slate-900">Editar Perfil do Paciente</h3>
+        <button onclick="fecharModalEdicao()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+
+      <form id="form-editar-paciente" onsubmit="salvarEdicaoPaciente(event)" class="space-y-3">
+        <input type="hidden" id="edit-paciente-id">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo:</label>
+          <input type="text" id="edit-nome" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp:</label>
+            <input type="tel" id="edit-phone" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Idade:</label>
+            <input type="number" id="edit-age" required min="1" max="125" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">País:</label>
+            <select id="edit-country" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fuso Horário:</label>
+            <select id="edit-timezone" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 pt-1">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Recorrência:</label>
+            <select id="edit-recorrencia" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="semanal">Semanal</option>
+              <option value="quinzenal">Quinzenal</option>
+              <option value="avulso">Avulso</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Dia Fixo:</label>
+            <select id="edit-dia-semana" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="">Nenhum</option>
+              <option value="0">Segunda</option>
+              <option value="1">Terça</option>
+              <option value="2">Quarta</option>
+              <option value="3">Quinta</option>
+              <option value="4">Sexta</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Horário Fixo:</label>
+            <select id="edit-horario" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="">Nenhum</option>
+              <option value="08:00">08:00</option>
+              <option value="09:00">09:00</option>
+              <option value="10:00">10:00</option>
+              <option value="11:00">11:00</option>
+              <option value="14:00">14:00</option>
+              <option value="15:00">15:00</option>
+              <option value="16:00">16:00</option>
+              <option value="17:00">17:00</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+            <input type="checkbox" id="edit-ativo" class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500">
+            <span>Paciente com cadastro ativo na clínica</span>
+          </label>
+        </div>
+
+        <div class="flex gap-2 pt-4">
+          <button type="button" onclick="fecharModalEdicao()" class="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-md">
+            Salvar Alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2: REMARCAR CONSULTA (A PARTIR DO CARD DO CALENDÁRIO)               -->
+  <!-- ========================================================================= -->
+  <div id="modal-remarcar-consulta-psi" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 text-left space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-base font-bold text-slate-900">Remarcar Consulta</h3>
+        <button onclick="fecharModalRemarcarPsi()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <input type="hidden" id="remarcar-psi-consulta-id">
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <span class="text-slate-400 uppercase text-[10px] font-bold block">Paciente:</span>
+          <span class="font-bold text-slate-800 text-sm" id="remarcar-psi-paciente-nome">—</span>
+          <span class="text-slate-500 block text-[11px] mt-1" id="remarcar-psi-data-atual">—</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nova data (Segunda a Sexta):</label>
+          <input 
+            type="date" 
+            id="remarcar-psi-nova-data" 
+            onchange="carregarHorariosRemarcarPsi()"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Novo horário:</label>
+          <select id="remarcar-psi-novo-horario" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            <option value="">Selecione primeiro a data</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2 pt-3">
+          <button type="button" onclick="fecharModalRemarcarPsi()" class="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50">
+            Cancelar
+          </button>
+          <button type="button" onclick="confirmarRemarcacaoPsi()" class="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-md">
+            Confirmar Nova Data
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="py-4 text-center text-xs text-slate-400 border-t border-slate-100 bg-white">
+    Health Hub • Gestão Clínica Dra. Carolina Bombonato
+  </footer>
+
+  <!-- Lógica JavaScript do Painel da Psicóloga -->
+  <script>
+    let token = localStorage.getItem("health_hub_token");
+    let psicologaLogada = null;
+    let listaPacientes = [];
+    let mapaPacientesPorId = {};
+    let semanaInicioAtual = obterSegundaFeira(new Date());
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
+      await carregarDadosPsicologa();
+      await carregarListasPaisesEFusos();
+      await carregarPacientes();
+      await carregarCalendarioSemanal();
+    });
+
+    function fazerLogout() {
+      localStorage.removeItem("health_hub_token");
+      window.location.href = "/login";
+    }
+
+    async function carregarDadosPsicologa() {
+      try {
+        const res = await fetch("/me", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          fazerLogout();
+          return;
+        }
+        psicologaLogada = await res.json();
+        if (psicologaLogada.tipo !== "psicologo") {
+          window.location.href = "/painel-paciente";
+          return;
+        }
+        document.getElementById("nome-psicologa-topo").innerText = `Dra. ${psicologaLogada.full_name}`;
+      } catch (e) {
+        fazerLogout();
+      }
+    }
+
+    function trocarAba(aba) {
+      document.getElementById("aba-pacientes").classList.toggle("hidden", aba !== "pacientes");
+      document.getElementById("aba-calendario").classList.toggle("hidden", aba !== "calendario");
+      document.getElementById("aba-registro").classList.toggle("hidden", aba !== "registro");
+
+      document.getElementById("tab-btn-pacientes").className = aba === "pacientes"
+        ? "px-4 py-2 text-xs font-bold rounded-xl bg-teal-600 text-white shadow-sm transition whitespace-nowrap"
+        : "px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap";
+
+      document.getElementById("tab-btn-calendario").className = aba === "calendario"
+        ? "px-4 py-2 text-xs font-bold rounded-xl bg-teal-600 text-white shadow-sm transition whitespace-nowrap"
+        : "px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap";
+
+      document.getElementById("tab-btn-registro").className = aba === "registro"
+        ? "px-4 py-2 text-xs font-bold rounded-xl bg-teal-600 text-white shadow-sm transition whitespace-nowrap"
+        : "px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap";
+
+      if (aba === "calendario") {
+        carregarCalendarioSemanal();
+      }
+    }
+
+    // =========================================================================
+    // SEÇÃO 1: TABELA EXPANSÍVEL DE PACIENTES
+    // =========================================================================
+    async function carregarPacientes() {
+      try {
+        const res = await fetch("/pacientes/meus", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+
+        listaPacientes = await res.json();
+        mapaPacientesPorId = {};
+        listaPacientes.forEach(p => mapaPacientesPorId[p.id] = p);
+
+        renderizarTabelaPacientes();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderizarTabelaPacientes() {
+      const corpo = document.getElementById("tabela-pacientes-corpo");
+      corpo.innerHTML = "";
+
+      if (listaPacientes.length === 0) {
+        corpo.innerHTML = `
+          <tr>
+            <td colspan="7" class="p-8 text-center text-slate-400">
+              Nenhum paciente cadastrado até o momento.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      listaPacientes.forEach(pac => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50/80 transition border-b border-slate-100";
+
+        // Nome truncado em 30 caracteres
+        const nomeLimitado = pac.full_name.length > 30 ? pac.full_name.substring(0, 30) + "..." : pac.full_name;
+
+        // Recorrência badge
+        let recBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">Avulso</span>`;
+        if (pac.tipo_recorrencia === "semanal") {
+          recBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">Semanal</span>`;
+        } else if (pac.tipo_recorrencia === "quinzenal") {
+          recBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800">Quinzenal</span>`;
+        }
+
+        // Horário Fixo
+        const horarioFixo = pac.horario_fixo ? `${pac.horario_fixo}` : "—";
+
+        // Ativo Badge
+        const ativoBadge = pac.ativo 
+          ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Ativo</span>`
+          : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">Inativo</span>`;
+
+        // Notificação Badge
+        let notifBadge = `<span class="text-slate-400">—</span>`;
+        if (pac.notificacao) {
+          notifBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 animate-pulse">${pac.notificacao}</span>`;
+        }
+
+        // WhatsApp link limpo
+        const telLimpo = pac.phone.replace(/[^0-9]/g, "");
+        const waLink = `https://wa.me/${telLimpo}?text=Ol%C3%A1%20${encodeURIComponent(pac.full_name)}%2C%20aqui%20%C3%A9%20a%20Dra.%20Carolina.`;
+
+        tr.innerHTML = `
+          <td class="p-4">
+            <div class="font-bold text-slate-800 text-xs" title="${pac.full_name}">${nomeLimitado}</div>
+            <div class="text-[11px] text-slate-400 font-mono">@${pac.username} • ${pac.age} anos</div>
+          </td>
+          <td class="p-4">${recBadge}</td>
+          <td class="p-4 font-medium text-slate-700">${horarioFixo}</td>
+          <td class="p-4">${ativoBadge}</td>
+          <td class="p-4">${notifBadge}</td>
+          <td class="p-4 text-center">
+            <a 
+              href="${waLink}" 
+              target="_blank" 
+              class="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-xl text-xs font-semibold transition"
+              title="Abrir WhatsApp do paciente"
+            >
+              <span>📱</span> WhatsApp
+            </a>
+          </td>
+          <td class="p-4 text-right">
+            <button 
+              onclick="abrirModalEdicao(${pac.id})" 
+              class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition"
+            >
+              ✏️ Editar
+            </button>
+          </td>
+        `;
+
+        corpo.appendChild(tr);
+      });
+    }
+
+    // Modal de Edição de Paciente
+    function abrirModalEdicao(pacId) {
+      const p = mapaPacientesPorId[pacId];
+      if (!p) return;
+
+      document.getElementById("edit-paciente-id").value = p.id;
+      document.getElementById("edit-nome").value = p.full_name;
+      document.getElementById("edit-phone").value = p.phone;
+      document.getElementById("edit-age").value = p.age;
+      document.getElementById("edit-country").value = p.country;
+      document.getElementById("edit-timezone").value = p.time_zone;
+      document.getElementById("edit-recorrencia").value = p.tipo_recorrencia || "semanal";
+      document.getElementById("edit-dia-semana").value = p.dia_semana_fixo !== null && p.dia_semana_fixo !== undefined ? p.dia_semana_fixo : "";
+      document.getElementById("edit-horario").value = p.horario_fixo || "";
+      document.getElementById("edit-ativo").checked = p.ativo;
+
+      document.getElementById("modal-editar-paciente").classList.remove("hidden");
+    }
+
+    function fecharModalEdicao() {
+      document.getElementById("modal-editar-paciente").classList.add("hidden");
+    }
+
+    async function salvarEdicaoPaciente(e) {
+      e.preventDefault();
+      const pacId = document.getElementById("edit-paciente-id").value;
+      const diaFixoVal = document.getElementById("edit-dia-semana").value;
+      const payload = {
+        full_name: document.getElementById("edit-nome").value.trim(),
+        phone: document.getElementById("edit-phone").value.trim(),
+        age: parseInt(document.getElementById("edit-age").value, 10),
+        country: document.getElementById("edit-country").value,
+        time_zone: document.getElementById("edit-timezone").value,
+        tipo_recorrencia: document.getElementById("edit-recorrencia").value,
+        dia_semana_fixo: diaFixoVal !== "" ? parseInt(diaFixoVal, 10) : null,
+        horario_fixo: document.getElementById("edit-horario").value || null,
+        ativo: document.getElementById("edit-ativo").checked
+      };
+
+      try {
+        const res = await fetch(`/usuarios/${pacId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("Paciente atualizado com sucesso!");
+          fecharModalEdicao();
+          await carregarPacientes();
+          await carregarCalendarioSemanal();
+        } else {
+          alert(data.detail || "Erro ao salvar alterações.");
+        }
+      } catch (err) {
+        alert("Erro ao conectar com o servidor.");
+      }
+    }
+
+    // =========================================================================
+    // SEÇÃO 2: CALENDÁRIO SEMANAL
+    // =========================================================================
+    function obterSegundaFeira(data) {
+      const d = new Date(data);
+      const diaSemana = d.getDay(); // 0 = Domingo, 1 = Segunda, ...
+      const diferenca = d.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+      return new Date(d.setDate(diferenca));
+    }
+
+    function formatarDataISO(data) {
+      const a = data.getFullYear();
+      const m = String(data.getMonth() + 1).padStart(2, '0');
+      const d = String(data.getDate()).padStart(2, '0');
+      return `${a}-${m}-${d}`;
+    }
+
+    function navegarSemana(delta) {
+      semanaInicioAtual.setDate(semanaInicioAtual.getDate() + delta * 7);
+      carregarCalendarioSemanal();
+    }
+
+    function irParaSemanaAtual() {
+      semanaInicioAtual = obterSegundaFeira(new Date());
+      carregarCalendarioSemanal();
+    }
+
+    async function carregarCalendarioSemanal() {
+      const strSegunda = formatarDataISO(semanaInicioAtual);
+      const domingo = new Date(semanaInicioAtual);
+      domingo.setDate(domingo.getDate() + 6);
+      const strDomingo = formatarDataISO(domingo);
+
+      document.getElementById("label-periodo-semana").innerText = 
+        `${semanaInicioAtual.toLocaleDateString('pt-BR')} a ${domingo.toLocaleDateString('pt-BR')}`;
+
+      try {
+        const res = await fetch(`/consultas/semana?semana_inicio=${strSegunda}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+
+        const consultasSemana = await res.json();
+        renderizarGradeCalendario(consultasSemana);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderizarGradeCalendario(consultas) {
+      const grade = document.getElementById("grade-calendario-semanal");
+      grade.innerHTML = "";
+
+      const nomesDias = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+
+      for (let i = 0; i < 7; i++) {
+        const diaAtual = new Date(semanaInicioAtual);
+        diaAtual.setDate(diaAtual.getDate() + i);
+        const dataStr = formatarDataISO(diaAtual);
+
+        // Consultas deste dia
+        const consultasDoDia = consultas.filter(c => {
+          const dC = new Date(c.data_hora_inicio);
+          return formatarDataISO(dC) === dataStr && c.status !== "cancelada" && c.status !== "recusada";
+        });
+
+        const coluna = document.createElement("div");
+        coluna.className = "bg-white rounded-2xl border border-slate-200/80 shadow-sm flex flex-col min-h-[300px]";
+
+        const isHoje = formatarDataISO(new Date()) === dataStr;
+
+        coluna.innerHTML = `
+          <div class="p-3 border-b border-slate-100 ${isHoje ? 'bg-teal-50/70' : 'bg-slate-50/50'} rounded-t-2xl text-center">
+            <span class="text-[11px] font-bold uppercase tracking-wider ${isHoje ? 'text-teal-800' : 'text-slate-500'} block">
+              ${nomesDias[i]}
+            </span>
+            <span class="text-sm font-extrabold ${isHoje ? 'text-teal-950 font-black' : 'text-slate-800'}">
+              ${diaAtual.getDate()}/${diaAtual.getMonth() + 1}
+            </span>
+          </div>
+          <div class="p-2 space-y-2 flex-1 flex flex-col" id="coluna-dia-${i}">
+          </div>
+        `;
+
+        grade.appendChild(coluna);
+
+        const containerCards = coluna.querySelector(`#coluna-dia-${i}`);
+
+        if (consultasDoDia.length === 0) {
+          containerCards.innerHTML = `
+            <div class="flex-1 flex items-center justify-center text-[11px] text-slate-300 py-6">
+              Sem consultas
+            </div>
+          `;
+        } else {
+          consultasDoDia.forEach(c => {
+            const cardEl = criarCardConsultaCalendario(c);
+            containerCards.appendChild(cardEl);
+          });
+        }
+      }
+    }
+
+    function criarCardConsultaCalendario(c) {
+      const card = document.createElement("div");
+      const isConfirmada = c.status === "confirmada";
+      const isPendente = c.status === "pendente_aprovacao";
+
+      const pac = c.paciente || { full_name: `Paciente #${c.paciente_id}`, phone: "", time_zone: "America/Sao_Paulo", age: "-" };
+      const dInicio = new Date(c.data_hora_inicio);
+      const horaStr = dInicio.toLocaleTimeString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      // Estilo do card
+      let estiloBase = "rounded-xl p-2.5 transition text-left cursor-pointer border text-xs shadow-sm relative";
+      if (isConfirmada) {
+        estiloBase += " bg-emerald-50/90 border-emerald-200 text-emerald-950 hover:border-emerald-400";
+      } else if (isPendente) {
+        estiloBase += " bg-purple-50 border-purple-200 text-purple-950 animate-pulse-slow hover:border-purple-400";
+      }
+
+      card.className = estiloBase;
+
+      const telLimpo = (pac.phone || "").replace(/[^0-9]/g, "");
+      const waLink = `https://wa.me/${telLimpo}?text=Ol%C3%A1%20${encodeURIComponent(pac.full_name)}%2C%20sobre%20sua%20consulta...`;
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between font-bold text-xs" onclick="toggleDetalhesCard(${c.id})">
+          <span>⏰ ${horaStr}</span>
+          <span class="text-[10px] ${isConfirmada ? 'text-emerald-700' : 'text-purple-700'}">
+            ${isConfirmada ? '✓ Confirmada' : '⏳ Pendente'} ▼
+          </span>
+        </div>
+        <div class="font-semibold text-slate-800 truncate mt-1 text-[11px]" onclick="toggleDetalhesCard(${c.id})">
+          ${pac.full_name}
+        </div>
+
+        <!-- Conteúdo Expansível com UserBase -->
+        <div id="detalhes-card-${c.id}" class="hidden mt-3 pt-2 border-t border-slate-200/80 space-y-2 text-[11px] text-slate-700">
+          <div class="space-y-0.5 text-slate-600 bg-white/60 p-2 rounded-lg border border-slate-200/50">
+            <div><strong>Telefone:</strong> ${pac.phone}</div>
+            <div><strong>Fuso:</strong> ${pac.time_zone || 'America/Sao_Paulo'}</div>
+            <div><strong>Idade:</strong> ${pac.age} anos</div>
+            <div><strong>Recorrência:</strong> ${pac.tipo_recorrencia || 'avulso'}</div>
+          </div>
+
+          <!-- Botão WhatsApp Obrigatório em todos os cards -->
+          <a 
+            href="${waLink}" 
+            target="_blank" 
+            class="w-full inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1.5 rounded-lg text-[10px] transition shadow-sm"
+          >
+            <span>📱</span> Abrir WhatsApp
+          </a>
+
+          <!-- Ações se Pendente: Aprovar ou Recusar -->
+          ${isPendente ? `
+            <div class="grid grid-cols-2 gap-1 pt-1">
+              <button 
+                onclick="aprovarConsultaCalendario(${c.id})" 
+                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg text-[10px] transition"
+              >
+                ✓ Aprovar
+              </button>
+              <button 
+                onclick="recusarConsultaCalendario(${c.id})" 
+                class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 rounded-lg text-[10px] transition"
+              >
+                ✕ Negar
+              </button>
+            </div>
+          ` : `
+            <!-- Ações se Confirmada: Remarcar ou Cancelar -->
+            <div class="grid grid-cols-2 gap-1 pt-1">
+              <button 
+                onclick="abrirModalRemarcarPsi(${c.id}, '${pac.full_name}', '${c.data_hora_inicio}')" 
+                class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-1.5 rounded-lg text-[10px] transition"
+              >
+                🔄 Remarcar
+              </button>
+              <button 
+                onclick="cancelarConsultaPsi(${c.id})" 
+                class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold py-1.5 rounded-lg text-[10px] transition"
+              >
+                ✕ Cancelar
+              </button>
+            </div>
+          `}
+        </div>
+      `;
+
+      return card;
+    }
+
+    function toggleDetalhesCard(id) {
+      const box = document.getElementById(`detalhes-card-${id}`);
+      if (box) {
+        box.classList.toggle("hidden");
+      }
+    }
+
+    async function aprovarConsultaCalendario(id) {
+      try {
+        const res = await fetch(`/consultas/${id}/aprovar`, {
+          method: "PATCH",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          alert("Consulta aprovada com sucesso!");
+          await carregarCalendarioSemanal();
+          await carregarPacientes();
+        } else {
+          alert("Erro ao aprovar consulta.");
+        }
+      } catch (e) {
+        alert("Erro na requisição.");
+      }
+    }
+
+    async function recusarConsultaCalendario(id) {
+      const motivo = prompt("Motivo da recusa (opcional):");
+      try {
+        const res = await fetch(`/consultas/${id}/recusar`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ justificativa: motivo })
+        });
+        if (res.ok) {
+          alert("Consulta recusada.");
+          await carregarCalendarioSemanal();
+          await carregarPacientes();
+        } else {
+          alert("Erro ao recusar consulta.");
+        }
+      } catch (e) {
+        alert("Erro na requisição.");
+      }
+    }
+
+    async function cancelarConsultaPsi(id) {
+      if (!confirm("Tem certeza que deseja cancelar esta consulta agendada?")) return;
+      try {
+        const res = await fetch(`/consultas/${id}/cancelar`, {
+          method: "PATCH",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          alert("Consulta cancelada.");
+          await carregarCalendarioSemanal();
+          await carregarPacientes();
+        } else {
+          alert("Erro ao cancelar consulta.");
+        }
+      } catch (e) {
+        alert("Erro na requisição.");
+      }
+    }
+
+    function abrirModalRemarcarPsi(id, nomePaciente, dataHoraInicio) {
+      document.getElementById("remarcar-psi-consulta-id").value = id;
+      document.getElementById("remarcar-psi-paciente-nome").innerText = nomePaciente;
+      const d = new Date(dataHoraInicio);
+      document.getElementById("remarcar-psi-data-atual").innerText = `Horário atual: ${d.toLocaleString('pt-BR')}`;
+      document.getElementById("modal-remarcar-consulta-psi").classList.remove("hidden");
+    }
+
+    function fecharModalRemarcarPsi() {
+      document.getElementById("modal-remarcar-consulta-psi").classList.add("hidden");
+    }
+
+    async function carregarHorariosRemarcarPsi() {
+      const dataEscolhida = document.getElementById("remarcar-psi-nova-data").value;
+      const sel = document.getElementById("remarcar-psi-novo-horario");
+      if (!dataEscolhida) return;
+
+      sel.innerHTML = "<option>Buscando horários...</option>";
+      try {
+        const res = await fetch(`/horarios-disponiveis?psicologa_id=${psicologaLogada.id}&dia=${dataEscolhida}`);
+        const listaUTC = await res.json();
+        sel.innerHTML = "";
+        if (!listaUTC || listaUTC.length === 0) {
+          sel.innerHTML = "<option value=''>Nenhum horário livre</option>";
+          return;
+        }
+        listaUTC.forEach(isoUTC => {
+          const d = new Date(isoUTC);
+          const horaLocal = d.toLocaleTimeString("pt-BR", {
+            timeZone: "America/Sao_Paulo",
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+          const opt = document.createElement("option");
+          opt.value = isoUTC;
+          opt.innerText = horaLocal;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        sel.innerHTML = "<option value=''>Erro ao carregar</option>";
+      }
+    }
+
+    async function confirmarRemarcacaoPsi() {
+      const id = document.getElementById("remarcar-psi-consulta-id").value;
+      const novaDataUTC = document.getElementById("remarcar-psi-novo-horario").value;
+      if (!novaDataUTC) {
+        alert("Selecione o novo horário.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/consultas/${id}/reagendar`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ data_hora_inicio: novaDataUTC })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("Consulta remarcada com sucesso!");
+          fecharModalRemarcarPsi();
+          await carregarCalendarioSemanal();
+        } else {
+          alert(data.detail || "Erro ao remarcar consulta.");
+        }
+      } catch (e) {
+        alert("Erro na requisição.");
+      }
+    }
+
+    // =========================================================================
+    // SEÇÃO 3: REGISTRAR NOVO USUÁRIO
+    // =========================================================================
+    function trocarTipoRegistro() {
+      const tipo = document.querySelector('input[name="novo_tipo"]:checked').value;
+      const blocoPaciente = document.getElementById("campos-paciente-recorrencia");
+      const blocoPsi = document.getElementById("campos-psicologo");
+
+      blocoPaciente.classList.toggle("hidden", tipo !== "paciente");
+      blocoPsi.classList.toggle("hidden", tipo !== "psicologo");
+
+      document.querySelectorAll(".radio-tipo").forEach(label => {
+        const r = label.querySelector("input");
+        if (r.checked) {
+          label.className = "cursor-pointer border-2 border-teal-500 bg-teal-50 p-3 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-800 radio-tipo";
+        } else {
+          label.className = "cursor-pointer border-2 border-slate-200 bg-white p-3 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-800 radio-tipo";
+        }
+      });
+    }
+
+    async function registrarNovoUsuario(e) {
+      e.preventDefault();
+      const tipo = document.querySelector('input[name="novo_tipo"]:checked').value;
+      const btn = document.getElementById("btn-cadastrar-usuario");
+      btn.disabled = true;
+      btn.innerText = "Registrando...";
+
+      const nome = document.getElementById("novo-nome").value.trim();
+      const pais = document.getElementById("novo-pais").value;
+      const tel = document.getElementById("novo-telefone").value.trim();
+      const tz = document.getElementById("novo-timezone").value;
+      const idade = parseInt(document.getElementById("novo-idade").value, 10);
+
+      try {
+        if (tipo === "paciente") {
+          const recTipo = document.getElementById("novo-recorrencia-tipo").value;
+          const diaFixo = document.getElementById("novo-dia-fixo").value;
+          const horaFixo = document.getElementById("novo-horario-fixo").value;
+
+          const payload = {
+            full_name: nome,
+            country: pais,
+            phone: tel,
+            time_zone: tz,
+            age: idade,
+            tipo_recorrencia: recTipo,
+            dia_semana_fixo: diaFixo !== "" ? parseInt(diaFixo, 10) : null,
+            horario_fixo: horaFixo || null
+          };
+
+          const res = await fetch("/pacientes/cadastrar-rapido", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (res.ok) {
+            alert(`Paciente ${data.full_name} registrado com sucesso!\n\nNome de Usuário: ${data.username}\nSenha provisória: 123456\nO paciente pode agora fazer login com essas credenciais.`);
+            document.getElementById("form-novo-usuario").reset();
+            trocarAba("pacientes");
+            await carregarPacientes();
+          } else {
+            alert(data.detail || "Erro ao registrar paciente.");
+          }
+
+        } else {
+          // Cadastro de psicólogo
+          const userPsi = document.getElementById("novo-username-psi").value.trim();
+          const passPsi = document.getElementById("novo-senha-psi").value;
+          if (!userPsi || !passPsi) {
+            alert("Informe o nome de usuário e a senha do psicólogo.");
+            return;
+          }
+
+          const payloadPsi = {
+            tipo: "psicologo",
+            full_name: nome,
+            username: userPsi,
+            password: passPsi,
+            country: pais,
+            phone: tel,
+            time_zone: tz,
+            age: idade
+          };
+
+          const res = await fetch("/usuarios", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payloadPsi)
+          });
+          const data = await res.json();
+
+          if (res.ok) {
+            alert(`Psicólogo(a) ${data.full_name} cadastrado(a) com sucesso!\nUsuário: ${data.username}`);
+            document.getElementById("form-novo-usuario").reset();
+            trocarAba("pacientes");
+          } else {
+            alert(data.detail || "Erro ao cadastrar psicólogo.");
+          }
+        }
+      } catch (err) {
+        alert("Erro de conexão ao registrar usuário.");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Cadastrar Novo Usuário";
+      }
+    }
+
+    async function carregarListasPaisesEFusos() {
+      try {
+        const [resP, resF] = await Promise.all([fetch("/util/paises"), fetch("/util/fusos")]);
+        if (resP.ok) {
+          const paises = await resP.json();
+          ["novo-pais", "edit-country"].forEach(id => {
+            const sel = document.getElementById(id);
+            if (!sel) return;
+            sel.innerHTML = "";
+            paises.forEach(p => {
+              const opt = document.createElement("option");
+              opt.value = p.codigo;
+              opt.innerText = `${p.nome} (${p.codigo})`;
+              if (p.codigo === "BR") opt.selected = true;
+              sel.appendChild(opt);
+            });
+          });
+        }
+        if (resF.ok) {
+          const fusos = await resF.json();
+          ["novo-timezone", "edit-timezone"].forEach(id => {
+            const sel = document.getElementById(id);
+            if (!sel) return;
+            sel.innerHTML = "";
+            fusos.forEach(tz => {
+              const opt = document.createElement("option");
+              opt.value = tz;
+              opt.innerText = tz;
+              if (tz === "America/Sao_Paulo") opt.selected = true;
+              sel.appendChild(opt);
+            });
+          });
+        }
+      } catch (e) {
+        console.error("Erro ao carregar utilitários:", e);
+      }
+    }
+  </script>
+
+</body>
+</html>

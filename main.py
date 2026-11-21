@@ -11,6 +11,10 @@ from database.consultas import Consultas, Status
 from schemas import (
     UserCreate,
     UserResponse,
+    UserUpdate,
+    PacienteTabelaItem,
+    ConsultaComPacienteResponse,
+    AlterarSenhaRequest,
     ConsultaCreate,
     ConsultaReagendar,
     ConsultaResponse,
@@ -69,18 +73,35 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 # Rotas para entrega das páginas web
-@app.get("/agendar", tags=["Frontend"], summary="Tela pública de agendamento do paciente")
-def pagina_agendar():
-    return FileResponse(STATIC_DIR / "agendar.html")
+@app.get("/", tags=["Frontend"], summary="Página inicial pública (Home)")
+def pagina_home():
+    return FileResponse(STATIC_DIR / "index.html")
 
 
-@app.get("/painel", tags=["Frontend"], summary="Painel administrativo da psicóloga")
-def pagina_painel():
-    return FileResponse(STATIC_DIR / "painel.html")
+@app.get("/painel-psicologo", tags=["Frontend"], summary="Painel de gestão da psicóloga")
+def pagina_painel_psicologo():
+    return FileResponse(STATIC_DIR / "painel_psicologo.html")
 
-@app.get("/registrar-psicologo", tags=["Frontend"], summary="Registrar novo psicólogo")
-def pagina_registrar():
-    return FileResponse(STATIC_DIR / "register_psicologa.html.html")
+
+@app.get("/painel-paciente", tags=["Frontend"], summary="Área do paciente")
+def pagina_painel_paciente():
+    return FileResponse(STATIC_DIR / "painel_paciente.html")
+
+
+@app.get("/login", tags=["Frontend"], summary="Página de login")
+def pagina_login_view():
+    return FileResponse(STATIC_DIR / "login.html")
+
+
+# Aliases para compatibilidade retroativa
+@app.get("/agendar", tags=["Frontend"], include_in_schema=False)
+def redirect_agendar():
+    return FileResponse(STATIC_DIR / "painel_paciente.html")
+
+
+@app.get("/painel", tags=["Frontend"], include_in_schema=False)
+def redirect_painel():
+    return FileResponse(STATIC_DIR / "painel_psicologo.html")
 
 
 # ==============================================================================
@@ -147,9 +168,9 @@ def valid_phone_number(phone: str, country_alpha2: str = "BR") -> str | None:
 # ==============================================================================
 # ROTAS GERAIS E AUTENTICAÇÃO (LOGIN)
 # ==============================================================================
-@app.get("/", tags=["Geral"])
-def root():
-    return {"mensagem": "Bem-vindo ao Health Hub API!"}
+@app.get("/api/status", tags=["Geral"], summary="Status da API")
+def api_status():
+    return {"status": "online", "mensagem": "Health Hub API operacional!"}
 
 
 @app.post(
@@ -260,7 +281,11 @@ def cadastrar_usuario(usuario_in: UserCreate, db: Session = Depends(get_db)):
         age=usuario_in.age,
         country=usuario_in.country,
         time_zone=usuario_in.time_zone,
-        phone=telefone_formatado
+        phone=telefone_formatado,
+        ativo=usuario_in.ativo,
+        tipo_recorrencia=usuario_in.tipo_recorrencia,
+        dia_semana_fixo=usuario_in.dia_semana_fixo,
+        horario_fixo=usuario_in.horario_fixo
     )
 
     db.add(novo_usuario)
@@ -279,20 +304,91 @@ def listar_usuarios(db: Session = Depends(get_db)):
     return db.query(User).all()
 
 
-@app.get(
+@app.patch(
     "/usuarios/{user_id}",
     response_model=UserResponse,
     tags=["Usuários"],
-    summary="Buscar um usuário específico pelo ID"
+    summary="Atualizar dados de um usuário (Psicóloga ou o próprio usuário)"
 )
-def buscar_usuario(user_id: int, db: Session = Depends(get_db)):
+def atualizar_usuario(
+    user_id: int,
+    dados: UserUpdate,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
     usuario = db.query(User).filter(User.id == user_id).first()
     if not usuario:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Usuário com ID {user_id} não foi encontrado."
         )
+
+    # Verifica permissão: apenas a psicóloga ou o próprio usuário
+    solicitante = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+    if not solicitante or (solicitante.tipo != UserType.Psicologo and solicitante.id != user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Você não tem permissão para editar este usuário."
+        )
+
+    if dados.full_name is not None:
+        usuario.full_name = dados.full_name
+    if dados.age is not None:
+        usuario.age = dados.age
+    if dados.country is not None:
+        usuario.country = dados.country
+    if dados.time_zone is not None:
+        usuario.time_zone = dados.time_zone
+    if dados.ativo is not None:
+        usuario.ativo = dados.ativo
+    if dados.tipo_recorrencia is not None:
+        usuario.tipo_recorrencia = dados.tipo_recorrencia
+    if dados.dia_semana_fixo is not None:
+        usuario.dia_semana_fixo = dados.dia_semana_fixo
+    if dados.horario_fixo is not None:
+        usuario.horario_fixo = dados.horario_fixo
+
+    if dados.phone is not None:
+        tel_formatado = valid_phone_number(dados.phone, dados.country or usuario.country)
+        if not tel_formatado:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Número de telefone inválido."
+            )
+        # Verifica se já pertence a outro usuário
+        conflito_tel = db.query(User).filter(User.phone == tel_formatado, User.id != user_id).first()
+        if conflito_tel:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este número de telefone já está cadastrado para outro usuário."
+            )
+        usuario.phone = tel_formatado
+
+    db.commit()
+    db.refresh(usuario)
     return usuario
+
+
+@app.post(
+    "/usuarios/alterar-senha",
+    tags=["Usuários"],
+    summary="Alterar senha do usuário logado"
+)
+def alterar_senha(
+    dados: AlterarSenhaRequest,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    usuario = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+    if not usuario:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
+
+    if not verificar_senha(dados.senha_atual, usuario.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta.")
+
+    usuario.password_hash = gerar_hash_senha(dados.nova_senha)
+    db.commit()
+    return {"mensagem": "Senha alterada com sucesso!"}
 
 
 # ==============================================================================
@@ -354,7 +450,7 @@ def verificar_paciente_ativo(
         )
 
     return VerificarPacienteResponse(
-        ativo=True,
+        ativo=paciente.ativo,
         paciente_id=paciente.id,
         nome=paciente.full_name,
         time_zone=paciente.time_zone,
@@ -404,11 +500,12 @@ def cadastrar_paciente_rapido(
         tipo=UserType.Paciente,
         full_name=paciente_in.full_name,
         username=username_gerado,
-        password_hash=gerar_hash_senha("senha_provisoria_123"),
+        password_hash=gerar_hash_senha("123456"),
         age=paciente_in.age,
         country=paciente_in.country,
         time_zone=paciente_in.time_zone,
         phone=telefone_formatado,
+        ativo=True,
         tipo_recorrencia=paciente_in.tipo_recorrencia,
         dia_semana_fixo=paciente_in.dia_semana_fixo,
         horario_fixo=paciente_in.horario_fixo
@@ -460,6 +557,131 @@ def configurar_recorrencia_paciente(
     db.refresh(paciente)
 
     # Gera as consultas automáticas para as semanas escolhidas
+    gerar_consultas_recorrentes(
+        db=db,
+        psicologa=psicologa,
+        paciente=paciente,
+        quantidade_semanas=dados.gerar_semanas
+    )
+
+    return paciente
+
+
+@app.get(
+    "/pacientes/meus",
+    response_model=List[PacienteTabelaItem],
+    tags=["Pacientes"],
+    summary="Listar todos os pacientes com status de notificação para a tabela do psicólogo"
+)
+def listar_meus_pacientes(
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    psicologa = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+    if not psicologa or psicologa.tipo != UserType.Psicologo:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito à psicóloga.")
+
+    pacientes = db.query(User).filter(User.tipo == UserType.Paciente).all()
+    resultado = []
+
+    for pac in pacientes:
+        # Verifica se há alguma notificação pendente (consulta pendente ou reagendamento)
+        notif = None
+        consulta_pendente = db.query(Consultas).filter(
+            Consultas.paciente_id == pac.id,
+            Consultas.status == Status.PENDENTE_APROVACAO
+        ).first()
+
+        if consulta_pendente:
+            if consulta_pendente.reagendamento_de_id:
+                notif = "Pedido de remarcação pendente"
+            else:
+                notif = "Nova sessão pendente de aprovação"
+        else:
+            # Verifica cancelamento recente nas últimas 24h
+            cancelada_recente = db.query(Consultas).filter(
+                Consultas.paciente_id == pac.id,
+                Consultas.status == Status.CANCELADA,
+                Consultas.data_hora_inicio >= datetime.utcnow()
+            ).first()
+            if cancelada_recente:
+                notif = "Consulta futura cancelada"
+
+        resultado.append(PacienteTabelaItem(
+            id=pac.id,
+            full_name=pac.full_name,
+            phone=pac.phone,
+            ativo=pac.ativo,
+            tipo_recorrencia=pac.tipo_recorrencia,
+            horario_fixo=pac.horario_fixo,
+            dia_semana_fixo=pac.dia_semana_fixo,
+            notificacao=notif,
+            age=pac.age,
+            country=pac.country,
+            time_zone=pac.time_zone,
+            username=pac.username
+        ))
+
+    return resultado
+
+
+@app.get(
+    "/pacientes/{paciente_id}/consultas-futuras",
+    response_model=List[ConsultaResponse],
+    tags=["Pacientes"],
+    summary="Listar consultas futuras de um paciente"
+)
+def listar_consultas_futuras_paciente(
+    paciente_id: int,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    agora_utc = datetime.now(timezone.utc)
+    consultas = db.query(Consultas).filter(
+        Consultas.paciente_id == paciente_id,
+        Consultas.status.in_([Status.CONFIRMADA, Status.PENDENTE_APROVACAO]),
+        Consultas.data_hora_inicio >= agora_utc
+    ).order_by(Consultas.data_hora_inicio.asc()).all()
+    return consultas
+
+
+@app.post(
+    "/pacientes/{paciente_id}/remarcar-recorrencia",
+    response_model=UserResponse,
+    tags=["Pacientes"],
+    summary="Paciente remarca sua recorrência fixa (cancela futuras e gera novas)"
+)
+def paciente_remarcar_recorrencia(
+    paciente_id: int,
+    dados: ConfigurarRecorrenciaRequest,
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    paciente = db.query(User).filter(User.id == paciente_id, User.tipo == UserType.Paciente).first()
+    if not paciente:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paciente não encontrado.")
+
+    # Busca a psicóloga padrão ou associada
+    psicologa = db.query(User).filter(User.tipo == UserType.Psicologo).first()
+    if not psicologa:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Psicóloga não encontrada no sistema.")
+
+    # Cancela as consultas futuras geradas da recorrência anterior
+    agora_utc = datetime.now(timezone.utc)
+    futuras = db.query(Consultas).filter(
+        Consultas.paciente_id == paciente_id,
+        Consultas.status == Status.CONFIRMADA,
+        Consultas.data_hora_inicio >= agora_utc + timedelta(hours=24)
+    ).all()
+    for c in futuras:
+        c.status = Status.CANCELADA
+
+    paciente.tipo_recorrencia = dados.tipo_recorrencia
+    paciente.dia_semana_fixo = dados.dia_semana_fixo
+    paciente.horario_fixo = dados.horario_fixo
+    db.commit()
+    db.refresh(paciente)
+
     gerar_consultas_recorrentes(
         db=db,
         psicologa=psicologa,
@@ -749,11 +971,54 @@ def cancelar_consulta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Consulta com ID {consulta_id} não foi encontrada."
         )
-        
+
+    usuario = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+    if usuario and usuario.tipo == UserType.Paciente:
+        # Validação de antecedência de 24 horas para o paciente
+        agora_utc = datetime.now(timezone.utc)
+        limite_minimo = agora_utc + timedelta(hours=24)
+        if consulta.data_hora_inicio < limite_minimo:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cancelamentos pelo paciente exigem no mínimo 24 horas de antecedência."
+            )
+
     consulta.status = Status.CANCELADA
     db.commit()
     db.refresh(consulta)
     return consulta
+
+
+@app.get(
+    "/consultas/semana",
+    response_model=List[ConsultaComPacienteResponse],
+    tags=["Consultas"],
+    summary="Listar consultas de uma semana específica (Segunda a Domingo) com dados do paciente"
+)
+def listar_consultas_semana(
+    semana_inicio: date = Query(..., description="Data da segunda-feira no formato AAAA-MM-DD"),
+    usuario_logado: dict = Depends(obter_usuario_logado),
+    db: Session = Depends(get_db)
+):
+    psicologa = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+    if not psicologa:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
+
+    from zoneinfo import ZoneInfo
+    fuso_psicologa = ZoneInfo(psicologa.time_zone if psicologa.tipo == UserType.Psicologo else "America/Sao_Paulo")
+
+    inicio_semana = datetime.combine(semana_inicio, time.min, tzinfo=fuso_psicologa)
+    fim_semana = datetime.combine(semana_inicio + timedelta(days=7), time.min, tzinfo=fuso_psicologa)
+
+    query = db.query(Consultas).filter(
+        Consultas.data_hora_inicio >= inicio_semana,
+        Consultas.data_hora_inicio < fim_semana
+    )
+    if psicologa.tipo == UserType.Psicologo:
+        query = query.filter(Consultas.psicologa_id == psicologa.id)
+
+    consultas = query.order_by(Consultas.data_hora_inicio.asc()).all()
+    return consultas
 
 
 @app.patch(
@@ -833,12 +1098,26 @@ def reagendar_consulta(
             detail=f"Consulta com ID {consulta_id} não foi encontrada."
         )
 
+    # Valida se o paciente logado está reagendando e checa antecedência de 24h na consulta atual
+    usuario = db.query(User).filter(User.username == usuario_logado["sub"]).first()
+    exigir_antecedencia = True
+    if usuario and usuario.tipo == UserType.Psicologo:
+        exigir_antecedencia = False
+    else:
+        agora_utc = datetime.now(timezone.utc)
+        if consulta.data_hora_inicio < agora_utc + timedelta(hours=24):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Remarcações pelo paciente exigem no mínimo 24 horas de antecedência."
+            )
+
     # Valida as regras para o novo horário (ignorando conflito com a própria consulta atual)
     nova_data_fim = validar_regras_agendamento(
         db=db,
         psicologa=consulta.psicologa,
         data_hora_inicio_solicitada=reagendar_in.data_hora_inicio,
-        consulta_id_ignorar=consulta.id
+        consulta_id_ignorar=consulta.id,
+        exigir_antecedencia=exigir_antecedencia
     )
 
     consulta.data_hora_inicio = reagendar_in.data_hora_inicio

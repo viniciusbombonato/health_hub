@@ -18,6 +18,7 @@ class UserBase(BaseModel):
     phone: str = Field(..., description="Telefone com DDI e DDD (ex: +5511999998888)")
     country: str = Field(default="BR", description="Código do país ou nome (ex: BR, PT)")
     time_zone: str = Field(default="America/Sao_Paulo", description="Fuso horário IANA válido")
+    ativo: bool = Field(default=True, description="Paciente ativo no sistema")
     tipo_recorrencia: Optional[RecorrenciaTipo] = Field(default=RecorrenciaTipo.SEMANAL)
     dia_semana_fixo: Optional[int] = Field(default=None, ge=0, le=4, description="0=Segunda, ..., 4=Sexta")
     horario_fixo: Optional[str] = Field(default=None, description="Horário fixo (ex: '16:00')")
@@ -145,6 +146,49 @@ class PacienteRapidoCreate(BaseModel):
     tipo_recorrencia: Optional[RecorrenciaTipo] = Field(default=RecorrenciaTipo.SEMANAL)
     dia_semana_fixo: Optional[int] = Field(default=None, ge=0, le=4)
     horario_fixo: Optional[str] = Field(default=None, description="Ex: '16:00'")
+
+
+class UserUpdate(BaseModel):
+    """Edição de dados do paciente ou psicólogo."""
+    full_name: Optional[str] = Field(None, min_length=2, max_length=120)
+    phone: Optional[str] = None
+    country: Optional[str] = None
+    time_zone: Optional[str] = None
+    age: Optional[int] = Field(None, gt=0, lt=130)
+    ativo: Optional[bool] = None
+    tipo_recorrencia: Optional[RecorrenciaTipo] = None
+    dia_semana_fixo: Optional[int] = Field(None, ge=0, le=4)
+    horario_fixo: Optional[str] = None
+
+
+class PacienteTabelaItem(BaseModel):
+    """Item para a tabela expansível do painel da psicóloga."""
+    id: int
+    full_name: str
+    phone: str
+    ativo: bool
+    tipo_recorrencia: Optional[RecorrenciaTipo] = None
+    horario_fixo: Optional[str] = None
+    dia_semana_fixo: Optional[int] = None
+    notificacao: Optional[str] = None
+    age: int
+    country: str
+    time_zone: str
+    username: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ConsultaComPacienteResponse(ConsultaResponse):
+    """Consulta enriquecida com os dados de UserBase do paciente."""
+    paciente: UserResponse
+
+
+class AlterarSenhaRequest(BaseModel):
+    """Permite alterar a senha inicial do usuário."""
+    senha_atual: str
+    nova_senha: str = Field(..., min_length=6)
+
 
 
 class ConfigurarRecorrenciaRequest(BaseModel):

@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Área do Paciente | Carolina Bombonato</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🌿</span>
+      <div>
+        <h1 class="text-base font-bold text-slate-900 leading-none">Carolina Bombonato</h1>
+        <span class="text-xs text-teal-700 font-medium">Área Exclusiva do Paciente</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <span id="nome-paciente-topo" class="text-xs font-semibold text-slate-700 hidden sm:inline"></span>
+      <button 
+        onclick="fazerLogout()" 
+        class="text-xs text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 px-3 py-1.5 rounded-lg transition"
+      >
+        Sair
+      </button>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-8 space-y-8">
+    
+    <!-- SEÇÃO 1: PRÓXIMA SESSÃO -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm relative overflow-hidden">
+      <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-teal-50 rounded-full pointer-events-none -z-0"></div>
+      
+      <div class="relative z-10">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 uppercase tracking-wider">
+            Sua Próxima Consulta
+          </span>
+          <span id="badge-status-proxima" class="text-xs font-semibold"></span>
+        </div>
+
+        <div id="container-proxima-consulta" class="py-2">
+          <div class="text-slate-400 text-sm">Carregando informações da sua consulta...</div>
+        </div>
+
+        <!-- Alerta de 24 horas -->
+        <div class="mt-4 p-3.5 bg-amber-50/70 border border-amber-200/60 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
+          <span class="text-base">⏰</span>
+          <div>
+            <strong>Regra da Clínica:</strong> Qualquer remarcação ou cancelamento deve ser feito com no mínimo <strong>24 horas de antecedência</strong> do horário da sessão.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 2: FORMULÁRIO DE GESTÃO DE CONSULTAS (3 OPÇÕES) -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+      <div class="mb-6">
+        <h2 class="text-xl font-bold text-slate-900">Gerenciar Minhas Sessões</h2>
+        <p class="text-xs text-slate-500 mt-1">Selecione o que deseja fazer abaixo:</p>
+      </div>
+
+      <!-- Opções em Cards Selecionáveis -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <label class="cursor-pointer border-2 border-teal-500 bg-teal-50/40 p-4 rounded-2xl flex flex-col justify-between transition hover:border-teal-600 radio-opcao">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-lg">🔄</span>
+            <input type="radio" name="tipo_acao" value="remarcar_especifica" checked onchange="trocarTipoAcao()" class="accent-teal-600">
+          </div>
+          <div>
+            <div class="font-bold text-sm text-slate-800">Remarcar consulta</div>
+            <div class="text-[11px] text-slate-500">Mudar a data de uma sessão pontual</div>
+          </div>
+        </label>
+
+        <label class="cursor-pointer border-2 border-slate-200 bg-white p-4 rounded-2xl flex flex-col justify-between transition hover:border-slate-300 radio-opcao">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-lg">❌</span>
+            <input type="radio" name="tipo_acao" value="cancelar_especifica" onchange="trocarTipoAcao()" class="accent-teal-600">
+          </div>
+          <div>
+            <div class="font-bold text-sm text-slate-800">Cancelar sessão</div>
+            <div class="text-[11px] text-slate-500">Cancelar sem remarcar</div>
+          </div>
+        </label>
+
+        <label class="cursor-pointer border-2 border-slate-200 bg-white p-4 rounded-2xl flex flex-col justify-between transition hover:border-slate-300 radio-opcao">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-lg">📅</span>
+            <input type="radio" name="tipo_acao" value="remarcar_recorrencia" onchange="trocarTipoAcao()" class="accent-teal-600">
+          </div>
+          <div>
+            <div class="font-bold text-sm text-slate-800">Mudar recorrência</div>
+            <div class="text-[11px] text-slate-500">Alterar seu dia e horário fixo</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- PAINEL 1: Remarcar Consulta Específica -->
+      <div id="painel-remarcar-especifica" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Escolha a sessão que deseja remarcar:</label>
+          <select id="select-consulta-remarcar" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            <option value="">Carregando consultas...</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nova data desejada (Segunda a Sexta):</label>
+            <input 
+              type="date" 
+              id="input-nova-data-remarcar" 
+              onchange="carregarHorariosLivresRemarcar()"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            >
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Novo horário:</label>
+            <select id="select-novo-horario-remarcar" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="">Selecione primeiro a data</option>
+            </select>
+          </div>
+        </div>
+
+        <button 
+          type="button" 
+          onclick="iniciarConfirmacaoRemarcar()" 
+          class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md shadow-teal-600/20 text-sm"
+        >
+          Prosseguir com a Remarcação →
+        </button>
+      </div>
+
+      <!-- PAINEL 2: Cancelar sem Remarcar -->
+      <div id="painel-cancelar-especifica" class="hidden space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Escolha qual sessão deseja cancelar:</label>
+          <select id="select-consulta-cancelar" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            <option value="">Carregando consultas...</option>
+          </select>
+          <span class="text-[11px] text-slate-400 mt-1 block">Apenas sessões com mais de 24h de antecedência podem ser canceladas pelo painel.</span>
+        </div>
+
+        <button 
+          type="button" 
+          onclick="iniciarConfirmacaoCancelar()" 
+          class="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md shadow-rose-600/20 text-sm"
+        >
+          Prosseguir com o Cancelamento
+        </button>
+      </div>
+
+      <!-- PAINEL 3: Remarcar Recorrência Fixa -->
+      <div id="painel-remarcar-recorrencia" class="hidden space-y-4">
+        <p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          Alterar a recorrência cancelará as sessões automáticas futuras da sua agenda e criará novas consultas para o novo dia/horário escolhido.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Frequência:</label>
+            <select id="recorrencia-tipo-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="semanal">Semanal (toda semana)</option>
+              <option value="quinzenal">Quinzenal (a cada 2 semanas)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Dia da Semana:</label>
+            <select id="recorrencia-dia-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="0">Segunda-feira</option>
+              <option value="1">Terça-feira</option>
+              <option value="2">Quarta-feira</option>
+              <option value="3">Quinta-feira</option>
+              <option value="4">Sexta-feira</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Horário:</label>
+            <select id="recorrencia-hora-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="08:00">08:00</option>
+              <option value="09:00">09:00</option>
+              <option value="10:00">10:00</option>
+              <option value="11:00">11:00</option>
+              <option value="14:00">14:00</option>
+              <option value="15:00">15:00</option>
+              <option value="16:00">16:00</option>
+              <option value="17:00">17:00</option>
+            </select>
+          </div>
+        </div>
+
+        <button 
+          type="button" 
+          onclick="iniciarConfirmacaoRecorrencia()" 
+          class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md shadow-teal-600/20 text-sm"
+        >
+          Confirmar Nova Recorrência →
+        </button>
+      </div>
+
+    </section>
+
+    <!-- SEÇÃO 3: MEUS DADOS E ALTERAR SENHA -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+      <h3 class="text-base font-bold text-slate-900 mb-1">Alterar Minha Senha</h3>
+      <p class="text-xs text-slate-500 mb-4">Se você está usando a senha provisória inicial (123456), recomendamos criar uma senha própria.</p>
+
+      <form onsubmit="alterarSenhaPaciente(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <input 
+          type="password" 
+          id="senha-atual-input" 
+          required 
+          placeholder="Senha atual (ex: 123456)"
+          class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+        >
+        <input 
+          type="password" 
+          id="nova-senha-input" 
+          required 
+          minlength="6"
+          placeholder="Nova senha (mínimo 6 dígitos)"
+          class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+        >
+        <button 
+          type="submit"
+          class="bg-slate-800 hover:bg-slate-900 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition"
+        >
+          Salvar Nova Senha
+        </button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- MODAL DE CONFIRMAÇÃO OBRIGATÓRIA (DATA ANTERIOR VS ATUALIZADA) -->
+  <div id="modal-confirmacao" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 text-left space-y-4">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl" id="modal-icone">⚠️</span>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900" id="modal-titulo">Confirmar Alteração</h3>
+          <p class="text-xs text-slate-500">Por favor, revise as datas antes de confirmar.</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3 text-xs">
+        <div>
+          <span class="text-slate-400 font-semibold uppercase text-[10px] block">Data Anterior</span>
+          <span class="text-slate-700 font-bold text-sm" id="modal-data-anterior">—</span>
+        </div>
+        <div class="border-t border-slate-200 pt-2">
+          <span class="text-teal-700 font-semibold uppercase text-[10px] block" id="modal-label-nova">Nova Data Atualizada</span>
+          <span class="text-teal-900 font-bold text-sm" id="modal-data-nova">—</span>
+        </div>
+      </div>
+
+      <div id="modal-alerta-24h" class="text-[11px] text-slate-500">
+        Esta ação será processada e confirmada na agenda da psicóloga.
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button 
+          onclick="fecharModal()" 
+          class="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition"
+        >
+          Cancelar
+        </button>
+        <button 
+          id="modal-btn-confirmar"
+          onclick="executarAcaoConfirmada()" 
+          class="flex-1 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-md transition"
+        >
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="py-4 text-center text-xs text-slate-400 border-t border-slate-100 bg-white">
+    Health Hub • Plataforma Segura da Dra. Carolina Bombonato
+  </footer>
+
+  <script>
+    let token = localStorage.getItem("health_hub_token");
+    let paciente = null;
+    let consultasFuturas = [];
+    let acaoPendente = null; // Guardará a função/payload a executar no modal
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
+      await carregarDadosPaciente();
+      await carregarConsultasFuturas();
+    });
+
+    function fazerLogout() {
+      localStorage.removeItem("health_hub_token");
+      window.location.href = "/login";
+    }
+
+    async function carregarDadosPaciente() {
+      try {
+        const res = await fetch("/me", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          fazerLogout();
+          return;
+        }
+        paciente = await res.json();
+        document.getElementById("nome-paciente-topo").innerText = `Olá, ${paciente.full_name}!`;
+
+        if (paciente.tipo_recorrencia) {
+          document.getElementById("recorrencia-tipo-input").value = paciente.tipo_recorrencia;
+        }
+        if (paciente.dia_semana_fixo !== null && paciente.dia_semana_fixo !== undefined) {
+          document.getElementById("recorrencia-dia-input").value = paciente.dia_semana_fixo;
+        }
+        if (paciente.horario_fixo) {
+          document.getElementById("recorrencia-hora-input").value = paciente.horario_fixo;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function carregarConsultasFuturas() {
+      if (!paciente) return;
+      try {
+        const res = await fetch(`/pacientes/${paciente.id}/consultas-futuras`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          consultasFuturas = await res.json();
+          renderizarProximaConsulta();
+          preencherDropdownsConsultas();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderizarProximaConsulta() {
+      const container = document.getElementById("container-proxima-consulta");
+      const badge = document.getElementById("badge-status-proxima");
+
+      if (!consultasFuturas || consultasFuturas.length === 0) {
+        container.innerHTML = `
+          <div class="text-slate-500 text-sm py-2">
+            Você não possui consultas futuras agendadas no momento.
+          </div>
+        `;
+        badge.innerHTML = "";
+        return;
+      }
+
+      const proxima = consultasFuturas[0];
+      const dataObj = new Date(proxima.data_hora_inicio);
+      const dataFormatada = dataObj.toLocaleDateString("pt-BR", {
+        timeZone: paciente.time_zone || "America/Sao_Paulo",
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      });
+      const horaFormatada = dataObj.toLocaleTimeString("pt-BR", {
+        timeZone: paciente.time_zone || "America/Sao_Paulo",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      let statusBadge = proxima.status === "confirmada" 
+        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Confirmada</span>`
+        : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 animate-pulse">Pendente de Aprovação</span>`;
+
+      badge.innerHTML = statusBadge;
+
+      const linkMeeting = proxima.link_reuniao 
+        ? `<div class="mt-3"><a href="${proxima.link_reuniao}" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl font-semibold hover:bg-teal-100">🔗 Link da Sala Virtual</a></div>` 
+        : "";
+
+      container.innerHTML = `
+        <div class="space-y-1">
+          <div class="text-xl sm:text-2xl font-extrabold text-slate-900 capitalize">
+            ${dataFormatada}
+          </div>
+          <div class="text-sm font-semibold text-teal-700">
+            ⏰ Às ${horaFormatada} (${paciente.time_zone || 'Brasília'})
+          </div>
+          ${linkMeeting}
+        </div>
+      `;
+    }
+
+    function preencherDropdownsConsultas() {
+      const selRemarcar = document.getElementById("select-consulta-remarcar");
+      const selCancelar = document.getElementById("select-consulta-cancelar");
+
+      selRemarcar.innerHTML = "";
+      selCancelar.innerHTML = "";
+
+      if (consultasFuturas.length === 0) {
+        selRemarcar.innerHTML = `<option value="">Nenhuma consulta futura encontrada</option>`;
+        selCancelar.innerHTML = `<option value="">Nenhuma consulta futura encontrada</option>`;
+        return;
+      }
+
+      const agora = new Date();
+      const limite24h = new Date(agora.getTime() + 24 * 60 * 60 * 1000);
+
+      consultasFuturas.forEach(c => {
+        const d = new Date(c.data_hora_inicio);
+        const dataStr = d.toLocaleString("pt-BR", {
+          timeZone: paciente.time_zone || "America/Sao_Paulo",
+          dateStyle: "short",
+          timeStyle: "short"
+        });
+        const statusTexto = c.status === "confirmada" ? "Confirmada" : "Pendente";
+        const podeEditar = d >= limite24h;
+
+        const optText = `${dataStr} (${statusTexto}) ${podeEditar ? '' : '— [Menos de 24h]'}`;
+
+        const opt1 = document.createElement("option");
+        opt1.value = c.id;
+        opt1.innerText = optText;
+        if (!podeEditar) opt1.disabled = true;
+        selRemarcar.appendChild(opt1);
+
+        const opt2 = document.createElement("option");
+        opt2.value = c.id;
+        opt2.innerText = optText;
+        if (!podeEditar) opt2.disabled = true;
+        selCancelar.appendChild(opt2);
+      });
+    }
+
+    function trocarTipoAcao() {
+      const valor = document.querySelector('input[name="tipo_acao"]:checked').value;
+      const p1 = document.getElementById("painel-remarcar-especifica");
+      const p2 = document.getElementById("painel-cancelar-especifica");
+      const p3 = document.getElementById("painel-remarcar-recorrencia");
+
+      p1.classList.toggle("hidden", valor !== "remarcar_especifica");
+      p2.classList.toggle("hidden", valor !== "cancelar_especifica");
+      p3.classList.toggle("hidden", valor !== "remarcar_recorrencia");
+
+      document.querySelectorAll(".radio-opcao").forEach(label => {
+        const radio = label.querySelector("input");
+        if (radio.checked) {
+          label.className = "cursor-pointer border-2 border-teal-500 bg-teal-50/40 p-4 rounded-2xl flex flex-col justify-between transition radio-opcao";
+        } else {
+          label.className = "cursor-pointer border-2 border-slate-200 bg-white p-4 rounded-2xl flex flex-col justify-between transition hover:border-slate-300 radio-opcao";
+        }
+      });
+    }
+
+    async function carregarHorariosLivresRemarcar() {
+      const dataEscolhida = document.getElementById("input-nova-data-remarcar").value;
+      const selHorario = document.getElementById("select-novo-horario-remarcar");
+      if (!dataEscolhida) return;
+
+      selHorario.innerHTML = "<option>Buscando horários...</option>";
+
+      try {
+        const res = await fetch(`/horarios-disponiveis?psicologa_id=1&dia=${dataEscolhida}`);
+        const listaUTC = await res.json();
+
+        selHorario.innerHTML = "";
+        if (!listaUTC || listaUTC.length === 0) {
+          selHorario.innerHTML = "<option value=''>Nenhum horário livre neste dia</option>";
+          return;
+        }
+
+        listaUTC.forEach(isoUTC => {
+          const d = new Date(isoUTC);
+          const horaLocal = d.toLocaleTimeString("pt-BR", {
+            timeZone: paciente.time_zone || "America/Sao_Paulo",
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+          const opt = document.createElement("option");
+          opt.value = isoUTC;
+          opt.innerText = horaLocal;
+          selHorario.appendChild(opt);
+        });
+      } catch (e) {
+        selHorario.innerHTML = "<option value=''>Erro ao carregar horários</option>";
+      }
+    }
+
+    // Modal de Confirmação Obrigatória
+    function abrirModal(titulo, icone, dataAnterior, dataNova, labelNova, callback) {
+      document.getElementById("modal-titulo").innerText = titulo;
+      document.getElementById("modal-icone").innerText = icone;
+      document.getElementById("modal-data-anterior").innerText = dataAnterior;
+      document.getElementById("modal-data-nova").innerText = dataNova;
+      document.getElementById("modal-label-nova").innerText = labelNova;
+      acaoPendente = callback;
+      document.getElementById("modal-confirmacao").classList.remove("hidden");
+    }
+
+    function fecharModal() {
+      document.getElementById("modal-confirmacao").classList.add("hidden");
+      acaoPendente = null;
+    }
+
+    async function executarAcaoConfirmada() {
+      if (acaoPendente) {
+        const btn = document.getElementById("modal-btn-confirmar");
+        btn.disabled = true;
+        btn.innerText = "Processando...";
+        try {
+          await acaoPendente();
+        } finally {
+          btn.disabled = false;
+          btn.innerText = "Confirmar";
+          fecharModal();
+        }
+      }
+    }
+
+    function iniciarConfirmacaoRemarcar() {
+      const consultaId = document.getElementById("select-consulta-remarcar").value;
+      const novoHorarioUTC = document.getElementById("select-novo-horario-remarcar").value;
+      if (!consultaId || !novoHorarioUTC) {
+        alert("Por favor, selecione a consulta e o novo horário desejado.");
+        return;
+      }
+
+      const consulta = consultasFuturas.find(c => c.id == consultaId);
+      const dataAntigaStr = new Date(consulta.data_hora_inicio).toLocaleString("pt-BR", {
+        timeZone: paciente.time_zone || "America/Sao_Paulo",
+        dateStyle: "full",
+        timeStyle: "short"
+      });
+
+      const dataNovaStr = new Date(novoHorarioUTC).toLocaleString("pt-BR", {
+        timeZone: paciente.time_zone || "America/Sao_Paulo",
+        dateStyle: "full",
+        timeStyle: "short"
+      });
+
+      abrirModal(
+        "Confirmar Remarcação",
+        "🔄",
+        dataAntigaStr,
+        dataNovaStr,
+        "Nova Data e Horário Solicitado",
+        async () => {
+          const res = await fetch(`/consultas/${consultaId}/reagendar`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ data_hora_inicio: novoHorarioUTC })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            alert("Consulta remarcada com sucesso!");
+            await carregarConsultasFuturas();
+          } else {
+            alert(data.detail || "Não foi possível remarcar a consulta.");
+          }
+        }
+      );
+    }
+
+    function iniciarConfirmacaoCancelar() {
+      const consultaId = document.getElementById("select-consulta-cancelar").value;
+      if (!consultaId) {
+        alert("Por favor, selecione qual consulta deseja cancelar.");
+        return;
+      }
+
+      const consulta = consultasFuturas.find(c => c.id == consultaId);
+      const dataAntigaStr = new Date(consulta.data_hora_inicio).toLocaleString("pt-BR", {
+        timeZone: paciente.time_zone || "America/Sao_Paulo",
+        dateStyle: "full",
+        timeStyle: "short"
+      });
+
+      abrirModal(
+        "Confirmar Cancelamento",
+        "❌",
+        dataAntigaStr,
+        "Cancelamento definitivo da sessão",
+        "Status Após Ação",
+        async () => {
+          const res = await fetch(`/consultas/${consultaId}/cancelar`, {
+            method: "PATCH",
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (res.ok) {
+            alert("Consulta cancelada com sucesso.");
+            await carregarConsultasFuturas();
+          } else {
+            alert(data.detail || "Não foi possível cancelar a consulta.");
+          }
+        }
+      );
+    }
+
+    function iniciarConfirmacaoRecorrencia() {
+      const tipo = document.getElementById("recorrencia-tipo-input").value;
+      const dia = parseInt(document.getElementById("recorrencia-dia-input").value, 10);
+      const hora = document.getElementById("recorrencia-hora-input").value;
+
+      const nomesDias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"];
+      const diaAntigo = paciente.dia_semana_fixo !== null ? nomesDias[paciente.dia_semana_fixo] : "Não definido";
+      const horaAntiga = paciente.horario_fixo || "Não definido";
+      const tipoAntigo = paciente.tipo_recorrencia || "semanal";
+
+      const dataAnteriorDesc = `${tipoAntigo} • ${diaAntigo} às ${horaAntiga}`;
+      const dataNovaDesc = `${tipo} • ${nomesDias[dia]} às ${hora}`;
+
+      abrirModal(
+        "Confirmar Nova Recorrência",
+        "📅",
+        dataAnteriorDesc,
+        dataNovaDesc,
+        "Novo Padrão Recorrente",
+        async () => {
+          const res = await fetch(`/pacientes/${paciente.id}/remarcar-recorrencia`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              tipo_recorrencia: tipo,
+              dia_semana_fixo: dia,
+              horario_fixo: hora,
+              gerar_semanas: 8
+            })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            alert("Recorrência atualizada com sucesso! Novas sessões foram geradas na sua agenda.");
+            await carregarDadosPaciente();
+            await carregarConsultasFuturas();
+          } else {
+            alert(data.detail || "Erro ao atualizar recorrência.");
+          }
+        }
+      );
+    }
+
+    async function alterarSenhaPaciente(e) {
+      e.preventDefault();
+      const atual = document.getElementById("senha-atual-input").value;
+      const nova = document.getElementById("nova-senha-input").value;
+
+      try {
+        const res = await fetch("/usuarios/alterar-senha", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ senha_atual: atual, nova_senha: nova })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("Senha alterada com sucesso!");
+          document.getElementById("senha-atual-input").value = "";
+          document.getElementById("nova-senha-input").value = "";
+        } else {
+          alert(data.detail || "Erro ao alterar senha.");
+        }
+      } catch (err) {
+        alert("Erro ao conectar com o servidor.");
+      }
+    }
+  </script>
+
+</body>
+</html>

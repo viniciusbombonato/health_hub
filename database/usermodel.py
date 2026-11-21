@@ -1,6 +1,6 @@
 #type: ignore
 from enum import Enum as PyEnum
-from sqlalchemy import String, Integer, Enum as SQLEnum
+from sqlalchemy import String, Integer, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.engine import Base
@@ -35,6 +35,9 @@ class User(Base):
     time_zone: Mapped[str] = mapped_column(String(50), default="America/Sao_Paulo", nullable=False)
    
     phone: Mapped[str] = mapped_column(String(30), nullable=False, unique=True, index=True)
+
+    # Status de paciente ativo persistido
+    ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Configurações de Atendimento Recorrente (Apenas para pacientes)
     tipo_recorrencia: Mapped[RecorrenciaTipo] = mapped_column(
