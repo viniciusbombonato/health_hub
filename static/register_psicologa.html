@@ -112,9 +112,8 @@
         });
         const data = await res.json();
         if (res.ok) {
-          alert(`Psicóloga ${data.full_name} cadastrada com sucesso!`);
-          // opcional: redirecionar para painel
-          window.location.href = '/painel';
+          alert(`Psicóloga ${data.full_name} cadastrada com sucesso! Faça login para acessar seu painel.`);
+          window.location.href = '/login';
         } else {
           erroBox.innerText = data.detail || 'Erro ao cadastrar.';
           erroBox.classList.remove('hidden');

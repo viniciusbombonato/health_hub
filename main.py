@@ -93,6 +93,11 @@ def pagina_login_view():
     return FileResponse(STATIC_DIR / "login.html")
 
 
+@app.get("/cadastro-inicial", tags=["Frontend"], summary="Cadastro inicial de psicólogo")
+def pagina_cadastro_inicial():
+    return FileResponse(STATIC_DIR / "register_psicologa.html")
+
+
 # Aliases para compatibilidade retroativa
 @app.get("/agendar", tags=["Frontend"], include_in_schema=False)
 def redirect_agendar():
