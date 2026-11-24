@@ -1,3 +1,4 @@
+import os
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 import phonenumbers
@@ -46,9 +47,44 @@ from scheduler import iniciar_agendador, parar_agendador, verificar_e_enviar_lem
 Base.metadata.create_all(bind=engine)
 
 
+def criar_psicologa_inicial():
+    """Cria a psicóloga inicial caso não exista nenhuma no banco e as variáveis de ambiente estejam definidas."""
+    admin_username = os.getenv("ADMIN_USERNAME")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    admin_phone = os.getenv("ADMIN_PHONE")
+
+    if not admin_username or not admin_password or not admin_phone:
+        return
+
+    db = SessionLocal()
+    try:
+        psicologa_existente = db.query(User).filter(User.tipo == UserType.Psicologo).first()
+        if psicologa_existente:
+            return
+
+        admin_country = os.getenv("ADMIN_COUNTRY", "BR")
+        telefone_formatado = valid_phone_number(admin_phone, admin_country) or admin_phone
+
+        nova_psicologa = User(
+            tipo=UserType.Psicologo,
+            full_name=os.getenv("ADMIN_FULL_NAME", "Dra. Carolina Silva"),
+            username=admin_username,
+            password_hash=gerar_hash_senha(admin_password),
+            age=int(os.getenv("ADMIN_AGE", "30")),
+            country=admin_country,
+            time_zone=os.getenv("ADMIN_TIME_ZONE", "America/Sao_Paulo"),
+            phone=telefone_formatado,
+        )
+        db.add(nova_psicologa)
+        db.commit()
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Inicialização: liga o APScheduler para rodar em segundo plano
+    # Inicialização: garante psicóloga inicial (se configurada) e liga o APScheduler
+    criar_psicologa_inicial()
     iniciar_agendador()
     yield
     # Encerramento: desliga o scheduler com segurança
